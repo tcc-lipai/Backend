@@ -1,0 +1,18 @@
+﻿namespace Backend.Models
+{
+    public class LicaoVideo
+    {
+        public int IdLicaoVideo { get; set; }
+
+        public string Titulo { get; set; } = string.Empty;
+        public string VideoDescricao { get; set; } = string.Empty;
+
+        public DateTime DataInicio { get; set; }
+        public DateTime? DataConclusao { get; set; }
+
+        public decimal ValorGanho { get; set; }
+
+        public int UnidadeId { get; set; }
+        public Unidade? Unidade { get; set; }
+    }
+}
