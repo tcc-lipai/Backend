@@ -1,7 +1,10 @@
-﻿namespace Backend.Models
+﻿using System.ComponentModel.DataAnnotations;
+
+namespace Backend.Models
 {
     public class Notificacao
     {
+        [Key]
         public int IdNotificacao { get; set; }
         public string Descricao { get; set; } = string.Empty;
 

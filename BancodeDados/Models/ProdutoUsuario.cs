@@ -1,7 +1,10 @@
-﻿namespace Backend.Models
+﻿using System.ComponentModel.DataAnnotations;
+
+namespace Backend.Models
 {
     public class ProdutoUsuario
     {
+        [Key]
         public int Id { get; set; }
 
         public int UsuarioId { get; set; }

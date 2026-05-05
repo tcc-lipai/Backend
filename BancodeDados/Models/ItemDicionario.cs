@@ -1,7 +1,10 @@
-﻿namespace Backend.Models
+﻿using System.ComponentModel.DataAnnotations;
+
+namespace Backend.Models
 {
     public class ItemDicionario
     {
+        [Key]
         public int IdItemDicionario { get; set; }
 
         public int DicionarioId { get; set; }

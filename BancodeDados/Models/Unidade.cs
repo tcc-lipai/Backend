@@ -1,7 +1,10 @@
-﻿namespace Backend.Models
+﻿using System.ComponentModel.DataAnnotations;
+
+namespace Backend.Models
 {
     public class Unidade
     {
+        [Key]
         public int IdUnidade { get; set; }
         public string Nome { get; set; } = string.Empty;
 
