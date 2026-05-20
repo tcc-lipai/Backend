@@ -1,4 +1,7 @@
-﻿public class LicaoAlternativa
+﻿using System.ComponentModel.DataAnnotations; 
+using Backend.Models;                      
+
+public class LicaoAlternativa
 {
     [Key]
     public int IdLicaoAlternativa { get; set; }

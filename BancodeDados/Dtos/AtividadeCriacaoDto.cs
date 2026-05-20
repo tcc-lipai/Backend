@@ -1,0 +1,7 @@
+﻿namespace Backend.Dtos
+{
+    public class AtividadeCriacaoDto
+    {
+        public string Nome { get; set; } = string.Empty;
+    }
+}

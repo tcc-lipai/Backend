@@ -1,7 +1,10 @@
-﻿namespace Backend.Models
+﻿using System.ComponentModel.DataAnnotations;
+
+namespace Backend.Models
 {
     public class LicaoFala
     {
+        [Key]
         public int IdLicaoFala { get; set; }
 
         public string FraseEsperada { get; set; } = string.Empty;

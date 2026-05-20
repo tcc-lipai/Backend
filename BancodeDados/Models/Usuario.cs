@@ -1,7 +1,10 @@
-﻿namespace Backend.Models
+﻿using System.ComponentModel.DataAnnotations;
+
+namespace Backend.Models
 {
     public class Usuario
     {
+        [Key]
         public int IdUsuario { get; set; }
         public decimal SaldoAtual { get; set; }
 

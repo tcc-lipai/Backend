@@ -1,7 +1,10 @@
-﻿namespace Backend.Models
+﻿using System.ComponentModel.DataAnnotations;
+
+namespace Backend.Models
 {
     public class LicaoVideo
     {
+        [Key]
         public int IdLicaoVideo { get; set; }
 
         public string Titulo { get; set; } = string.Empty;
