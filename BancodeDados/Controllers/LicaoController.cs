@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Backend.Data;
 using Backend.Dtos;
@@ -18,229 +19,253 @@ namespace Backend.Controllers
         }
 
         // ==========================================
-        // 1. CREATE (POST) - COMPUTANDO PONTOS E NOTIFICAÇÃO
+        // ALTERNATIVA (interpretação de leitura labial)
         // ==========================================
-        [HttpPost]
-        public async Task<IActionResult> PostLicao(LicaoCriacaoDto dto)
+        [HttpPost("alternativa")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> PostAlternativa(LicaoAlternativaCriacaoDto dto)
         {
             var unidadeExiste = await _context.Unidades.AnyAsync(u => u.IdUnidade == dto.UnidadeId);
             if (!unidadeExiste)
-            {
                 return BadRequest(new { message = "A Unidade informada não existe." });
-            }
 
-            // Buscamos o usuário para poder incrementar o saldo dele após a lição
-            var usuario = await _context.Usuarios.FindAsync(dto.UsuarioId);
-            if (usuario == null)
+            var licao = new LicaoAlternativa
             {
-                return BadRequest(new { message = "O Usuário informado não existe para computar a recompensa." });
-            }
+                UnidadeId = dto.UnidadeId,
+                VideoUrl = dto.VideoUrl,
+                Pergunta = dto.Pergunta,
+                A = dto.A,
+                B = dto.B,
+                C = dto.C,
+                D = dto.D,
+                RespostaCerta = dto.RespostaCerta,
+                ValorGanho = dto.ValorGanho
+            };
 
-            switch (dto.TipoLicao.ToLower())
-            {
-                case "alternativa":
-                    int valorAlternativa = 10;
+            _context.LicoesAlternativa.Add(licao);
+            await _context.SaveChangesAsync();
 
-                    var licaoAlt = new LicaoAlternativa
-                    {
-                        UnidadeId = dto.UnidadeId,
-                        Pergunta = dto.Pergunta,
-                        A = dto.A,
-                        B = dto.B,
-                        C = dto.C,
-                        D = dto.D,
-                        RespostaCerta = dto.RespostaCerta,
-                        UsuarioId = dto.UsuarioId,
-                        DataInicio = DateTime.UtcNow,
-                        ValorGanho = valorAlternativa
-                    };
-                    _context.LicoesAlternativa.Add(licaoAlt);
-
-                    // Atualiza saldo do usuário e gera notificação automática
-                    usuario.SaldoAtual += valorAlternativa;
-                    _context.Notificacoes.Add(new Notificacao
-                    {
-                        UsuarioId = dto.UsuarioId,
-                        Descricao = $"Lição Concluída! 🪙 Você completou um exercício de alternativa e ganhou {valorAlternativa} moedas."
-                    });
-
-                    await _context.SaveChangesAsync();
-                    return Ok(new { message = "Lição de Alternativa concluída com sucesso!", id = licaoAlt.IdLicaoAlternativa, tipo = "alternativa", novoSaldo = usuario.SaldoAtual });
-
-                case "fala":
-                    int valorFala = 15;
-
-                    var licaoFala = new LicaoFala
-                    {
-                        UnidadeId = dto.UnidadeId,
-                        FraseEsperada = dto.FraseEsperada,
-                        DataInicio = DateTime.UtcNow,
-                        ValorGanho = valorFala
-                    };
-                    _context.LicoesFala.Add(licaoFala);
-
-                    // Atualiza saldo do usuário e gera notificação automática
-                    usuario.SaldoAtual += valorFala;
-                    _context.Notificacoes.Add(new Notificacao
-                    {
-                        UsuarioId = dto.UsuarioId,
-                        Descricao = $"Lição Concluída! 🗣️ Você completou o exercício de fala e ganhou {valorFala} moedas."
-                    });
-
-                    await _context.SaveChangesAsync();
-                    return Ok(new { message = "Lição de Fala concluída com sucesso!", id = licaoFala.IdLicaoFala, tipo = "fala", novoSaldo = usuario.SaldoAtual });
-
-                case "video":
-                    int valorVideo = 20;
-
-                    var licaoVideo = new LicaoVideo
-                    {
-                        UnidadeId = dto.UnidadeId,
-                        Titulo = dto.Titulo,
-                        VideoDescricao = dto.VideoDescricao,
-                        DataInicio = DateTime.UtcNow,
-                        ValorGanho = valorVideo
-                    };
-                    _context.LicoesVideo.Add(licaoVideo);
-
-                    // Atualiza saldo do usuário e gera notificação automática
-                    usuario.SaldoAtual += valorVideo;
-                    _context.Notificacoes.Add(new Notificacao
-                    {
-                        UsuarioId = dto.UsuarioId,
-                        Descricao = $"Lição Concluída! 🎬 Você assistiu ao vídeo informativo e ganhou {valorVideo} moedas."
-                    });
-
-                    await _context.SaveChangesAsync();
-                    return Ok(new { message = "Lição de Vídeo concluída com sucesso!", id = licaoVideo.IdLicaoVideo, tipo = "video", novoSaldo = usuario.SaldoAtual });
-
-                default:
-                    return BadRequest(new { message = "Tipo de lição inválido. Escolha entre: Alternativa, Fala ou Video." });
-            }
+            return CreatedAtAction(nameof(GetAlternativaPorId), new { id = licao.IdLicaoAlternativa }, licao);
         }
 
-        // ==========================================
-        // 2. READ ALL (GET)
-        // ==========================================
-        [HttpGet]
-        public async Task<IActionResult> GetLicoes()
+        [HttpGet("alternativa/{id}")]
+        [Authorize]
+        public async Task<IActionResult> GetAlternativaPorId(int id)
         {
-            var alternativas = await _context.LicoesAlternativa.ToListAsync();
-            var falas = await _context.LicoesFala.ToListAsync();
-            var videos = await _context.LicoesVideo.ToListAsync();
-
-            return Ok(new
-            {
-                Alternativas = alternativas,
-                Falas = falas,
-                Videos = videos
-            });
+            var licao = await _context.LicoesAlternativa.FindAsync(id);
+            if (licao == null) return NotFound();
+            return Ok(licao);
         }
 
-        // ==========================================
-        // 3. READ BY ID & TYPE (GET /api/Licao/fala/5)
-        // ==========================================
-        [HttpGet("{tipo}/{id}")]
-        public async Task<IActionResult> GetLicaoPorId(string tipo, int id)
+        [HttpPut("alternativa/{id}")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> PutAlternativa(int id, LicaoAlternativaCriacaoDto dto)
         {
-            switch (tipo.ToLower())
-            {
-                case "alternativa":
-                    var alt = await _context.LicoesAlternativa.FindAsync(id);
-                    if (alt == null) return NotFound(new { message = "Lição de alternativa não encontrada." });
-                    return Ok(alt);
+            var licao = await _context.LicoesAlternativa.FindAsync(id);
+            if (licao == null) return NotFound();
 
-                case "fala":
-                    var fala = await _context.LicoesFala.FindAsync(id);
-                    if (fala == null) return NotFound(new { message = "Lição de fala não encontrada." });
-                    return Ok(fala);
-
-                case "video":
-                    var video = await _context.LicoesVideo.FindAsync(id);
-                    if (video == null) return NotFound(new { message = "Lição de vídeo não encontrada." });
-                    return Ok(video);
-
-                default:
-                    return BadRequest(new { message = "Tipo inválido." });
-            }
-        }
-
-        // ==========================================
-        // 4. UPDATE (PUT /api/Licao/video/5)
-        // ==========================================
-        [HttpPut("{tipo}/{id}")]
-        public async Task<IActionResult> PutLicao(string tipo, int id, LicaoCriacaoDto dto)
-        {
-            switch (tipo.ToLower())
-            {
-                case "alternativa":
-                    var alt = await _context.LicoesAlternativa.FindAsync(id);
-                    if (alt == null) return NotFound(new { message = "Lição não encontrada." });
-
-                    alt.Pergunta = dto.Pergunta;
-                    alt.A = dto.A;
-                    alt.B = dto.B;
-                    alt.C = dto.C;
-                    alt.D = dto.D;
-                    alt.RespostaCerta = dto.RespostaCerta;
-                    alt.UnidadeId = dto.UnidadeId;
-                    break;
-
-                case "fala":
-                    var fala = await _context.LicoesFala.FindAsync(id);
-                    if (fala == null) return NotFound(new { message = "Lição não encontrada." });
-
-                    fala.FraseEsperada = dto.FraseEsperada;
-                    fala.UnidadeId = dto.UnidadeId;
-                    break;
-
-                case "video":
-                    var video = await _context.LicoesVideo.FindAsync(id);
-                    if (video == null) return NotFound(new { message = "Lição não encontrada." });
-
-                    video.Titulo = dto.Titulo;
-                    video.VideoDescricao = dto.VideoDescricao;
-                    video.UnidadeId = dto.UnidadeId;
-                    break;
-
-                default:
-                    return BadRequest(new { message = "Tipo inválido." });
-            }
+            licao.UnidadeId = dto.UnidadeId;
+            licao.VideoUrl = dto.VideoUrl;
+            licao.Pergunta = dto.Pergunta;
+            licao.A = dto.A;
+            licao.B = dto.B;
+            licao.C = dto.C;
+            licao.D = dto.D;
+            licao.RespostaCerta = dto.RespostaCerta;
+            licao.ValorGanho = dto.ValorGanho;
 
             await _context.SaveChangesAsync();
             return NoContent();
         }
 
-        // ==========================================
-        // 5. DELETE (DELETE /api/Licao/alternativa/5)
-        // ==========================================
-        [HttpDelete("{tipo}/{id}")]
-        public async Task<IActionResult> DeleteLicao(string tipo, int id)
+        [HttpDelete("alternativa/{id}")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> DeleteAlternativa(int id)
         {
-            switch (tipo.ToLower())
+            var licao = await _context.LicoesAlternativa.FindAsync(id);
+            if (licao == null) return NotFound();
+            _context.LicoesAlternativa.Remove(licao);
+            await _context.SaveChangesAsync();
+            return NoContent();
+        }
+
+        // ==========================================
+        // FALA
+        // ==========================================
+        [HttpPost("fala")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> PostFala(LicaoFalaCriacaoDto dto)
+        {
+            var unidadeExiste = await _context.Unidades.AnyAsync(u => u.IdUnidade == dto.UnidadeId);
+            if (!unidadeExiste)
+                return BadRequest(new { message = "A Unidade informada não existe." });
+
+            var licao = new LicaoFala
             {
-                case "alternativa":
-                    var alt = await _context.LicoesAlternativa.FindAsync(id);
-                    if (alt == null) return NotFound();
-                    _context.LicoesAlternativa.Remove(alt);
-                    break;
+                UnidadeId = dto.UnidadeId,
+                FraseEsperada = dto.FraseEsperada,
+                NivelDificuldade = dto.NivelDificuldade,
+                ValorGanho = dto.ValorGanho
+            };
 
-                case "fala":
-                    var fala = await _context.LicoesFala.FindAsync(id);
-                    if (fala == null) return NotFound();
-                    _context.LicoesFala.Remove(fala);
-                    break;
+            _context.LicoesFala.Add(licao);
+            await _context.SaveChangesAsync();
 
-                case "video":
-                    var video = await _context.LicoesVideo.FindAsync(id);
-                    if (video == null) return NotFound();
-                    _context.LicoesVideo.Remove(video);
-                    break;
+            return CreatedAtAction(nameof(GetFalaPorId), new { id = licao.IdLicaoFala }, licao);
+        }
 
-                default:
-                    return BadRequest(new { message = "Tipo inválido." });
-            }
+        [HttpGet("fala/{id}")]
+        [Authorize]
+        public async Task<IActionResult> GetFalaPorId(int id)
+        {
+            var licao = await _context.LicoesFala.FindAsync(id);
+            if (licao == null) return NotFound();
+            return Ok(licao);
+        }
 
+        [HttpPut("fala/{id}")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> PutFala(int id, LicaoFalaCriacaoDto dto)
+        {
+            var licao = await _context.LicoesFala.FindAsync(id);
+            if (licao == null) return NotFound();
+
+            licao.UnidadeId = dto.UnidadeId;
+            licao.FraseEsperada = dto.FraseEsperada;
+            licao.NivelDificuldade = dto.NivelDificuldade;
+            licao.ValorGanho = dto.ValorGanho;
+
+            await _context.SaveChangesAsync();
+            return NoContent();
+        }
+
+        [HttpDelete("fala/{id}")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> DeleteFala(int id)
+        {
+            var licao = await _context.LicoesFala.FindAsync(id);
+            if (licao == null) return NotFound();
+            _context.LicoesFala.Remove(licao);
+            await _context.SaveChangesAsync();
+            return NoContent();
+        }
+
+        // ==========================================
+        // VIDEO (vídeo-aula, sem progressão/nota)
+        // ==========================================
+        [HttpPost("video")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> PostVideo(LicaoVideoCriacaoDto dto)
+        {
+            var unidadeExiste = await _context.Unidades.AnyAsync(u => u.IdUnidade == dto.UnidadeId);
+            if (!unidadeExiste)
+                return BadRequest(new { message = "A Unidade informada não existe." });
+
+            var licao = new LicaoVideo
+            {
+                UnidadeId = dto.UnidadeId,
+                Titulo = dto.Titulo,
+                VideoDescricao = dto.VideoDescricao,
+                VideoUrl = dto.VideoUrl
+            };
+
+            _context.LicoesVideo.Add(licao);
+            await _context.SaveChangesAsync();
+
+            return CreatedAtAction(nameof(GetVideoPorId), new { id = licao.IdLicaoVideo }, licao);
+        }
+
+        [HttpGet("video/{id}")]
+        [Authorize]
+        public async Task<IActionResult> GetVideoPorId(int id)
+        {
+            var licao = await _context.LicoesVideo.FindAsync(id);
+            if (licao == null) return NotFound();
+            return Ok(licao);
+        }
+
+        [HttpPut("video/{id}")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> PutVideo(int id, LicaoVideoCriacaoDto dto)
+        {
+            var licao = await _context.LicoesVideo.FindAsync(id);
+            if (licao == null) return NotFound();
+
+            licao.UnidadeId = dto.UnidadeId;
+            licao.Titulo = dto.Titulo;
+            licao.VideoDescricao = dto.VideoDescricao;
+            licao.VideoUrl = dto.VideoUrl;
+
+            await _context.SaveChangesAsync();
+            return NoContent();
+        }
+
+        [HttpDelete("video/{id}")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> DeleteVideo(int id)
+        {
+            var licao = await _context.LicoesVideo.FindAsync(id);
+            if (licao == null) return NotFound();
+            _context.LicoesVideo.Remove(licao);
+            await _context.SaveChangesAsync();
+            return NoContent();
+        }
+
+        // ==========================================
+        // VIBRAÇÃO (acompanhante, sem progressão/nota)
+        // ==========================================
+        [HttpPost("vibracao")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> PostVibracao(LicaoVibracaoCriacaoDto dto)
+        {
+            var unidadeExiste = await _context.Unidades.AnyAsync(u => u.IdUnidade == dto.UnidadeId);
+            if (!unidadeExiste)
+                return BadRequest(new { message = "A Unidade informada não existe." });
+
+            var licao = new LicaoVibracao
+            {
+                UnidadeId = dto.UnidadeId,
+                Silaba = dto.Silaba,
+                Instrucao = dto.Instrucao
+            };
+
+            _context.LicoesVibracao.Add(licao);
+            await _context.SaveChangesAsync();
+
+            return CreatedAtAction(nameof(GetVibracaoPorId), new { id = licao.IdLicaoVibracao }, licao);
+        }
+
+        [HttpGet("vibracao/{id}")]
+        [Authorize]
+        public async Task<IActionResult> GetVibracaoPorId(int id)
+        {
+            var licao = await _context.LicoesVibracao.FindAsync(id);
+            if (licao == null) return NotFound();
+            return Ok(licao);
+        }
+
+        [HttpPut("vibracao/{id}")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> PutVibracao(int id, LicaoVibracaoCriacaoDto dto)
+        {
+            var licao = await _context.LicoesVibracao.FindAsync(id);
+            if (licao == null) return NotFound();
+
+            licao.UnidadeId = dto.UnidadeId;
+            licao.Silaba = dto.Silaba;
+            licao.Instrucao = dto.Instrucao;
+
+            await _context.SaveChangesAsync();
+            return NoContent();
+        }
+
+        [HttpDelete("vibracao/{id}")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> DeleteVibracao(int id)
+        {
+            var licao = await _context.LicoesVibracao.FindAsync(id);
+            if (licao == null) return NotFound();
+            _context.LicoesVibracao.Remove(licao);
             await _context.SaveChangesAsync();
             return NoContent();
         }

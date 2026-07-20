@@ -7,6 +7,7 @@ namespace Backend.Models
         [Key]
         public int IdAtividade { get; set; }
         public string Nome { get; set; } = string.Empty;
+        public string? Descricao { get; set; }
 
         public List<Unidade> Unidades { get; set; } = new();
     }

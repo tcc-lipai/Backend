@@ -30,6 +30,9 @@ namespace Backend.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("IdAtividade"));
 
+                    b.Property<string>("Descricao")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("Nome")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -119,6 +122,56 @@ namespace Backend.Migrations
                     b.ToTable("ItensDicionario");
                 });
 
+            modelBuilder.Entity("Backend.Models.LicaoAlternativa", b =>
+                {
+                    b.Property<int>("IdLicaoAlternativa")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("IdLicaoAlternativa"));
+
+                    b.Property<string>("A")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("B")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("C")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("D")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Pergunta")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("RespostaCerta")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("UnidadeId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("ValorGanho")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("VideoUrl")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("IdLicaoAlternativa");
+
+                    b.HasIndex("UnidadeId");
+
+                    b.ToTable("LicoesAlternativa");
+                });
+
             modelBuilder.Entity("Backend.Models.LicaoFala", b =>
                 {
                     b.Property<int>("IdLicaoFala")
@@ -127,18 +180,12 @@ namespace Backend.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("IdLicaoFala"));
 
-                    b.Property<DateTime?>("DataConclusao")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime>("DataInicio")
-                        .HasColumnType("datetime2");
-
                     b.Property<string>("FraseEsperada")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("FraseFalada")
-                        .HasColumnType("nvarchar(max)");
+                    b.Property<int>("NivelDificuldade")
+                        .HasColumnType("int");
 
                     b.Property<int>("UnidadeId")
                         .HasColumnType("int");
@@ -154,6 +201,32 @@ namespace Backend.Migrations
                     b.ToTable("LicoesFala");
                 });
 
+            modelBuilder.Entity("Backend.Models.LicaoVibracao", b =>
+                {
+                    b.Property<int>("IdLicaoVibracao")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("IdLicaoVibracao"));
+
+                    b.Property<string>("Instrucao")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Silaba")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("UnidadeId")
+                        .HasColumnType("int");
+
+                    b.HasKey("IdLicaoVibracao");
+
+                    b.HasIndex("UnidadeId");
+
+                    b.ToTable("LicoesVibracao");
+                });
+
             modelBuilder.Entity("Backend.Models.LicaoVideo", b =>
                 {
                     b.Property<int>("IdLicaoVideo")
@@ -162,12 +235,6 @@ namespace Backend.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("IdLicaoVideo"));
 
-                    b.Property<DateTime?>("DataConclusao")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime>("DataInicio")
-                        .HasColumnType("datetime2");
-
                     b.Property<string>("Titulo")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -175,10 +242,11 @@ namespace Backend.Migrations
                     b.Property<int>("UnidadeId")
                         .HasColumnType("int");
 
-                    b.Property<decimal>("ValorGanho")
-                        .HasColumnType("decimal(18,2)");
-
                     b.Property<string>("VideoDescricao")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("VideoUrl")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
@@ -264,6 +332,128 @@ namespace Backend.Migrations
                     b.ToTable("ProdutoUsuarios");
                 });
 
+            modelBuilder.Entity("Backend.Models.Profissional", b =>
+                {
+                    b.Property<int>("IdProfissional")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("IdProfissional"));
+
+                    b.Property<string>("CodigoAcesso")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("Nome")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Registro")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("SenhaHash")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("IdProfissional");
+
+                    b.HasIndex("CodigoAcesso")
+                        .IsUnique();
+
+                    b.HasIndex("Email")
+                        .IsUnique();
+
+                    b.ToTable("Profissionais");
+                });
+
+            modelBuilder.Entity("Backend.Models.ProgressoAlternativa", b =>
+                {
+                    b.Property<int>("IdProgresso")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("IdProgresso"));
+
+                    b.Property<bool>("Correta")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("DataConclusao")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("DataInicio")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("LicaoAlternativaId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("PontuacaoObtida")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("RespostaDada")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<int>("UsuarioId")
+                        .HasColumnType("int");
+
+                    b.HasKey("IdProgresso");
+
+                    b.HasIndex("LicaoAlternativaId");
+
+                    b.HasIndex("UsuarioId");
+
+                    b.ToTable("ProgressosAlternativa");
+                });
+
+            modelBuilder.Entity("Backend.Models.ProgressoFala", b =>
+                {
+                    b.Property<int>("IdProgresso")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("IdProgresso"));
+
+                    b.Property<bool>("Correta")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("DataConclusao")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("DataInicio")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("LicaoFalaId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("PontuacaoObtida")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<string>("TextoReconhecidoPelaIA")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("UsuarioId")
+                        .HasColumnType("int");
+
+                    b.HasKey("IdProgresso");
+
+                    b.HasIndex("LicaoFalaId");
+
+                    b.HasIndex("UsuarioId");
+
+                    b.ToTable("ProgressosFala");
+                });
+
             modelBuilder.Entity("Backend.Models.Unidade", b =>
                 {
                     b.Property<int>("IdUnidade")
@@ -301,19 +491,21 @@ namespace Backend.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(450)");
 
+                    b.Property<int>("NivelDificuldade")
+                        .HasColumnType("int");
+
                     b.Property<string>("Nome")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<int?>("ProfissionalId")
+                        .HasColumnType("int");
 
                     b.Property<decimal>("SaldoAtual")
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
-                    b.Property<string>("Senha")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("TipoUsuario")
+                    b.Property<string>("SenhaHash")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
@@ -322,63 +514,9 @@ namespace Backend.Migrations
                     b.HasIndex("Email")
                         .IsUnique();
 
+                    b.HasIndex("ProfissionalId");
+
                     b.ToTable("Usuarios");
-                });
-
-            modelBuilder.Entity("LicaoAlternativa", b =>
-                {
-                    b.Property<int>("IdLicaoAlternativa")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("IdLicaoAlternativa"));
-
-                    b.Property<string>("A")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("B")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("C")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("D")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime?>("DataConclusao")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime>("DataInicio")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Pergunta")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("RespostaCerta")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("UnidadeId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("UsuarioId")
-                        .HasColumnType("int");
-
-                    b.Property<decimal>("ValorGanho")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.HasKey("IdLicaoAlternativa");
-
-                    b.HasIndex("UnidadeId");
-
-                    b.HasIndex("UsuarioId");
-
-                    b.ToTable("LicoesAlternativa");
                 });
 
             modelBuilder.Entity("Backend.Models.Conquista", b =>
@@ -422,10 +560,32 @@ namespace Backend.Migrations
                     b.Navigation("Dicionario");
                 });
 
+            modelBuilder.Entity("Backend.Models.LicaoAlternativa", b =>
+                {
+                    b.HasOne("Backend.Models.Unidade", "Unidade")
+                        .WithMany("LicoesAlternativa")
+                        .HasForeignKey("UnidadeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Unidade");
+                });
+
             modelBuilder.Entity("Backend.Models.LicaoFala", b =>
                 {
                     b.HasOne("Backend.Models.Unidade", "Unidade")
                         .WithMany("LicoesFala")
+                        .HasForeignKey("UnidadeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Unidade");
+                });
+
+            modelBuilder.Entity("Backend.Models.LicaoVibracao", b =>
+                {
+                    b.HasOne("Backend.Models.Unidade", "Unidade")
+                        .WithMany("LicoesVibracao")
                         .HasForeignKey("UnidadeId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -474,6 +634,44 @@ namespace Backend.Migrations
                     b.Navigation("Usuario");
                 });
 
+            modelBuilder.Entity("Backend.Models.ProgressoAlternativa", b =>
+                {
+                    b.HasOne("Backend.Models.LicaoAlternativa", "LicaoAlternativa")
+                        .WithMany()
+                        .HasForeignKey("LicaoAlternativaId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Backend.Models.Usuario", "Usuario")
+                        .WithMany()
+                        .HasForeignKey("UsuarioId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("LicaoAlternativa");
+
+                    b.Navigation("Usuario");
+                });
+
+            modelBuilder.Entity("Backend.Models.ProgressoFala", b =>
+                {
+                    b.HasOne("Backend.Models.LicaoFala", "LicaoFala")
+                        .WithMany()
+                        .HasForeignKey("LicaoFalaId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Backend.Models.Usuario", "Usuario")
+                        .WithMany()
+                        .HasForeignKey("UsuarioId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("LicaoFala");
+
+                    b.Navigation("Usuario");
+                });
+
             modelBuilder.Entity("Backend.Models.Unidade", b =>
                 {
                     b.HasOne("Backend.Models.Atividade", "Atividade")
@@ -485,23 +683,14 @@ namespace Backend.Migrations
                     b.Navigation("Atividade");
                 });
 
-            modelBuilder.Entity("LicaoAlternativa", b =>
+            modelBuilder.Entity("Backend.Models.Usuario", b =>
                 {
-                    b.HasOne("Backend.Models.Unidade", "Unidade")
-                        .WithMany("LicoesAlternativa")
-                        .HasForeignKey("UnidadeId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                    b.HasOne("Backend.Models.Profissional", "Profissional")
+                        .WithMany("Pacientes")
+                        .HasForeignKey("ProfissionalId")
+                        .OnDelete(DeleteBehavior.SetNull);
 
-                    b.HasOne("Backend.Models.Usuario", "Usuario")
-                        .WithMany()
-                        .HasForeignKey("UsuarioId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Unidade");
-
-                    b.Navigation("Usuario");
+                    b.Navigation("Profissional");
                 });
 
             modelBuilder.Entity("Backend.Models.Atividade", b =>
@@ -524,11 +713,18 @@ namespace Backend.Migrations
                     b.Navigation("ProdutoUsuarios");
                 });
 
+            modelBuilder.Entity("Backend.Models.Profissional", b =>
+                {
+                    b.Navigation("Pacientes");
+                });
+
             modelBuilder.Entity("Backend.Models.Unidade", b =>
                 {
                     b.Navigation("LicoesAlternativa");
 
                     b.Navigation("LicoesFala");
+
+                    b.Navigation("LicoesVibracao");
 
                     b.Navigation("LicoesVideo");
                 });

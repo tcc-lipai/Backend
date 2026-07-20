@@ -1,0 +1,51 @@
+## .NET / Visual Studio
+ 
+# Build results
+bin/
+obj/
+out/
+ 
+# Visual Studio files
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+ 
+# Rider / VS Code
+.idea/
+.vscode/
+ 
+# NuGet
+*.nupkg
+**/packages/*
+!**/packages/build/
+*.nuget.props
+*.nuget.targets
+ 
+# Publish output
+**/PublishProfiles/*.pubxml.user
+publish/
+ 
+# Logs
+*.log
+ 
+# ==========================================
+# ⚠️ ARQUIVOS COM SEGREDO — NÃO SUBIR PRO GIT
+# ==========================================
+appsettings.Development.json
+appsettings.Production.json
+appsettings.Local.json
+*.pfx
+ 
+# Se você quiser versionar o appsettings.json base (sem segredo real,
+# só com placeholders), pode remover a linha abaixo. Mas como o seu
+# appsettings.json hoje tem Jwt:Key e Admin:SenhaHash de verdade,
+# o mais seguro é ignorá-lo também e manter um appsettings.Example.json
+# versionado no lugar, sem valores reais.
+appsettings.json
+ 
+# Banco de dados local (se usar SQLite/LocalDB em arquivo)
+*.mdf
+*.ldf
+*.db

@@ -49,7 +49,8 @@ namespace Backend.Controllers
         {
             var novaAtividade = new Atividade
             {
-                Nome = dto.Nome
+                Nome = dto.Nome,
+                Descricao = dto.Descricao
             };
 
             _context.Atividades.Add(novaAtividade);
@@ -73,6 +74,7 @@ namespace Backend.Controllers
 
             // 2. Atualiza apenas os campos permitidos (no caso, o Nome)
             atividadeBanco.Nome = dto.Nome;
+            atividadeBanco.Descricao = dto.Descricao;
 
             try
             {

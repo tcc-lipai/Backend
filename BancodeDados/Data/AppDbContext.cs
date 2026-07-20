@@ -8,6 +8,7 @@ namespace Backend.Data
         public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
         public DbSet<Usuario> Usuarios { get; set; }
+        public DbSet<Profissional> Profissionais { get; set; }
         public DbSet<Atividade> Atividades { get; set; }
         public DbSet<Unidade> Unidades { get; set; }
         public DbSet<LicaoFala> LicoesFala { get; set; }
@@ -20,17 +21,35 @@ namespace Backend.Data
         public DbSet<Categoria> Categorias { get; set; }
         public DbSet<Produto> Produtos { get; set; }
         public DbSet<ProdutoUsuario> ProdutoUsuarios { get; set; }
+        public DbSet<LicaoVibracao> LicoesVibracao { get; set; }
+        public DbSet<ProgressoAlternativa> ProgressosAlternativa { get; set; }
+        public DbSet<ProgressoFala> ProgressosFala { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-            // 1. SEGURANÇA: E-mail Único
-            // Impede que o banco aceite dois cadastros com o mesmo e-mail.
+            // E-mail único (Usuario)
             modelBuilder.Entity<Usuario>()
                 .HasIndex(u => u.Email)
                 .IsUnique();
 
-            // 2. SEGURANÇA: Configuração da Tabela Associativa (Compra de Produtos)
-            // Garante que a relação N:N entre Produto e Usuario seja bem definida.
+            // E-mail e Código de Acesso únicos (Profissional)
+            modelBuilder.Entity<Profissional>()
+                .HasIndex(p => p.Email)
+                .IsUnique();
+
+            modelBuilder.Entity<Profissional>()
+                .HasIndex(p => p.CodigoAcesso)
+                .IsUnique();
+
+            // Vínculo opcional Usuario -> Profissional
+            // Se o profissional for removido, o usuário não é apagado, só desvincula.
+            modelBuilder.Entity<Usuario>()
+                .HasOne(u => u.Profissional)
+                .WithMany(p => p.Pacientes)
+                .HasForeignKey(u => u.ProfissionalId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            // Tabela associativa Produto <-> Usuario
             modelBuilder.Entity<ProdutoUsuario>()
                 .HasOne(pu => pu.Usuario)
                 .WithMany(u => u.ProdutoUsuarios)
@@ -41,8 +60,7 @@ namespace Backend.Data
                 .WithMany(p => p.ProdutoUsuarios)
                 .HasForeignKey(pu => pu.ProdutoId);
 
-            // 3. SEGURANÇA: Precisão Decimal
-            // Para evitar erros de arredondamento em valores financeiros (Saldo e Ganhos).
+            // Precisão decimal
             modelBuilder.Entity<Usuario>()
                 .Property(u => u.SaldoAtual)
                 .HasPrecision(18, 2);
@@ -53,6 +71,18 @@ namespace Backend.Data
 
             modelBuilder.Entity<ProdutoUsuario>()
                 .Property(p => p.TotalCompra)
+                .HasPrecision(18, 2);
+
+            modelBuilder.Entity<LicaoAlternativa>()
+                .Property(l => l.ValorGanho)
+                .HasPrecision(18, 2);
+
+            modelBuilder.Entity<ProgressoAlternativa>()
+                .Property(p => p.PontuacaoObtida)
+                .HasPrecision(18, 2);
+
+            modelBuilder.Entity<ProgressoFala>()
+                .Property(p => p.PontuacaoObtida)
                 .HasPrecision(18, 2);
 
             base.OnModelCreating(modelBuilder);
