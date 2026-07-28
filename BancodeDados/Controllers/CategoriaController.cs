@@ -1,8 +1,9 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using Backend.Data;
+﻿using Backend.Data;
 using Backend.Dtos;
 using Backend.Models;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace Backend.Controllers
 {
@@ -47,23 +48,27 @@ namespace Backend.Controllers
         // 2. LISTAR TODAS (GET: api/Categorias)
         // ==========================================
         [HttpGet]
+        [Authorize]
         public async Task<ActionResult<IEnumerable<Categoria>>> GetCategorias()
         {
-            return await _context.Categorias.ToListAsync();
+            return await _context.Categorias
+                .Include(c => c.Palavras)
+                .ToListAsync();
         }
 
         // ==========================================
         // 3. BUSCAR POR ID (GET: api/Categorias/5)
         // ==========================================
         [HttpGet("{id}")]
+        [Authorize]
         public async Task<ActionResult<Categoria>> GetCategoriaPorId(int id)
         {
-            var categoria = await _context.Categorias.FindAsync(id);
+            var categoria = await _context.Categorias
+                .Include(c => c.Palavras)
+                .FirstOrDefaultAsync(c => c.IdCategoria == id);
 
             if (categoria == null)
-            {
                 return NotFound(new { message = "Categoria não encontrada." });
-            }
 
             return categoria;
         }

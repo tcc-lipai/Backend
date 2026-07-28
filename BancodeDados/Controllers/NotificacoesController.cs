@@ -1,5 +1,7 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 using Backend.Data;
 using Backend.Dtos;
 
@@ -7,6 +9,7 @@ namespace Backend.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize]
     public class NotificacoesController : ControllerBase
     {
         private readonly AppDbContext _context;
@@ -22,9 +25,15 @@ namespace Backend.Controllers
         [HttpGet("usuario/{usuarioId}")]
         public async Task<IActionResult> GetNotificacoesPorUsuario(int usuarioId)
         {
+            var idLogado = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+            var role = User.FindFirstValue(ClaimTypes.Role);
+
+            if (role == "Usuario" && idLogado != usuarioId)
+                return Forbid();
+
             var notificacoes = await _context.Notificacoes
                 .Where(n => n.UsuarioId == usuarioId)
-                .OrderByDescending(n => n.IdNotificacao) // As mais recentes primeiro
+                .OrderByDescending(n => n.DataCriacao)
                 .ToListAsync();
 
             return Ok(notificacoes);
@@ -36,14 +45,17 @@ namespace Backend.Controllers
         [HttpPut("{id}")]
         public async Task<IActionResult> PutNotificacao(int id, NotificacaoAtualizacaoDto dto)
         {
+            var idLogado = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+
             var notificacao = await _context.Notificacoes.FindAsync(id);
             if (notificacao == null) return NotFound();
 
-            // Geralmente usamos para mudar a propriedade 'Lida' para true
-            // Se o seu model tiver uma propriedade com outro nome (ex: Visualizada, Status), mude aqui!
-            // notificacao.Lida = dto.Lida; 
+            if (notificacao.UsuarioId != idLogado)
+                return Forbid();
 
+            notificacao.Lida = dto.Lida;
             await _context.SaveChangesAsync();
+
             return NoContent();
         }
     }

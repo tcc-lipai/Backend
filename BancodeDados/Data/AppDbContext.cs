@@ -16,14 +16,15 @@ namespace Backend.Data
         public DbSet<LicaoAlternativa> LicoesAlternativa { get; set; }
         public DbSet<Conquista> Conquistas { get; set; }
         public DbSet<Notificacao> Notificacoes { get; set; }
-        public DbSet<Dicionario> Dicionarios { get; set; }
-        public DbSet<ItemDicionario> ItensDicionario { get; set; }
+        public DbSet<Palavra> Palavras { get; set; }
         public DbSet<Categoria> Categorias { get; set; }
         public DbSet<Produto> Produtos { get; set; }
         public DbSet<ProdutoUsuario> ProdutoUsuarios { get; set; }
         public DbSet<LicaoVibracao> LicoesVibracao { get; set; }
         public DbSet<ProgressoAlternativa> ProgressosAlternativa { get; set; }
         public DbSet<ProgressoFala> ProgressosFala { get; set; }
+        public DbSet<ConquistaUsuario> ConquistasUsuario { get; set; }
+        public DbSet<MensagemContato> MensagensContato { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

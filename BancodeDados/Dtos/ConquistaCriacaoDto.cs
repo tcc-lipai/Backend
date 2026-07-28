@@ -3,6 +3,7 @@
     public class ConquistaCriacaoDto
     {
         public string Nome { get; set; } = string.Empty;
-        public int UsuarioId { get; set; }
+        public string? Descricao { get; set; }
+        public string? IconeUrl { get; set; }
     }
 }

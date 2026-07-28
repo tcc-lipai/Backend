@@ -1,8 +1,9 @@
-﻿using Backend.Data; // Ajuste para o namespace do seu DbContext
+﻿using Backend.Data; 
 using Backend.Dtos;
 using Backend.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authorization;
 
 namespace Backend.Controllers
 {
@@ -19,6 +20,7 @@ namespace Backend.Controllers
 
         // GET: api/Atividades
         [HttpGet]
+        [Authorize]
         public async Task<ActionResult<IEnumerable<Atividade>>> GetAtividades()
         {
             // Inclui as Unidades caso queira retornar a árvore completa
@@ -29,6 +31,7 @@ namespace Backend.Controllers
 
         // GET: api/Atividades/5
         [HttpGet("{id}")]
+        [Authorize]
         public async Task<ActionResult<Atividade>> GetAtividade(int id)
         {
             var atividade = await _context.Atividades
@@ -45,6 +48,7 @@ namespace Backend.Controllers
 
         // POST: api/Atividades
         [HttpPost]
+        [Authorize(Roles = "Admin")]
         public async Task<ActionResult<Atividade>> PostAtividade(AtividadeCriacaoDto dto)
         {
             var novaAtividade = new Atividade
@@ -62,6 +66,7 @@ namespace Backend.Controllers
 
         // PUT: api/Atividades/5
         [HttpPut("{id}")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> PutAtividade(int id, AtividadeCriacaoDto dto)
         {
             // 1. Busca a atividade direto do banco de dados
@@ -98,6 +103,7 @@ namespace Backend.Controllers
 
         // DELETE: api/Atividades/5
         [HttpDelete("{id}")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> DeleteAtividade(int id)
         {
             var atividade = await _context.Atividades.FindAsync(id);

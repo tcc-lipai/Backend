@@ -21,5 +21,12 @@ namespace Backend.Models
         public List<Notificacao> Notificacoes { get; set; } = new();
         public List<Conquista> Conquistas { get; set; } = new();
         public List<ProdutoUsuario> ProdutoUsuarios { get; set; } = new();
+
+
+        public int DiasSeguidos { get; set; } = 0;
+        public DateTime? UltimaAtividadeData { get; set; }
+        public DateTime? OfensivaCongeladaAte { get; set; }
+        public DateTime? MultiplicadorMoedasAte { get; set; }
+        public decimal? MultiplicadorMoedasValor { get; set; }
     }
 }

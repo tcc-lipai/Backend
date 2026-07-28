@@ -9,6 +9,6 @@ namespace Backend.Models
 
         public string Nome { get; set; } = string.Empty;
 
-        public List<ItemDicionario> Itens { get; set; } = new();
+        public List<Palavra> Palavras { get; set; } = new();
     }
 }

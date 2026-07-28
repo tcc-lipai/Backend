@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Backend.Data;
 using Backend.Dtos;
@@ -18,15 +19,19 @@ namespace Backend.Controllers
         }
 
         // ==========================================
-        // 1. CADASTRAR PRODUTO NA LOJA (POST: api/Produto)
+        // 1. CADASTRAR PRODUTO NA LOJA (POST: api/Produto) — somente Admin
         // ==========================================
         [HttpPost]
+        [Authorize(Roles = "Admin")]
         public async Task<ActionResult<Produto>> PostProduto(ProdutoCriacaoDto dto)
         {
             var novoProduto = new Produto
             {
                 Nome = dto.Nome,
-                Preco = dto.Preco
+                Preco = dto.Preco,
+                Tipo = dto.Tipo,
+                DuracaoDias = dto.DuracaoDias,
+                ValorMultiplicador = dto.ValorMultiplicador
             };
 
             _context.Produtos.Add(novoProduto);
@@ -36,43 +41,49 @@ namespace Backend.Controllers
         }
 
         // ==========================================
-        // 2. COMPRAR PRODUTO (POST: api/Produto/comprar)
+        // 2. COMPRAR PRODUTO (POST: api/Produto/comprar) — Usuario
         // ==========================================
         [HttpPost("comprar")]
+        [Authorize(Roles = "Usuario")]
         public async Task<IActionResult> ComprarProduto(CompraProdutoDto dto)
         {
-            // 1. Valida se o usuário existe
             var usuario = await _context.Usuarios.FindAsync(dto.UsuarioId);
             if (usuario == null)
-            {
                 return NotFound(new { message = "Usuário não encontrado." });
-            }
 
-            // 2. Valida se o produto existe
             var produto = await _context.Produtos.FindAsync(dto.ProdutoId);
             if (produto == null)
-            {
                 return NotFound(new { message = "Produto não encontrado." });
-            }
 
             if (dto.Quantidade <= 0)
-            {
                 return BadRequest(new { message = "A quantidade deve ser maior que zero." });
-            }
 
-            // 3. Calcula o total da compra
             decimal total = produto.Preco * dto.Quantidade;
 
-            // 4. Regra de Negócio: Valida se o usuário tem saldo suficiente
             if (usuario.SaldoAtual < total)
-            {
                 return BadRequest(new { message = $"Saldo insuficiente. O total é {total} e você possui {usuario.SaldoAtual}." });
-            }
 
-            // 5. Deduz o saldo do usuário
             usuario.SaldoAtual -= total;
 
-            // 6. Registra a compra na tabela intermediária
+            // Aplica o efeito do produto, se ele tiver um
+            if (produto.Tipo == TipoProduto.BloqueioOfensiva && produto.DuracaoDias.HasValue)
+            {
+                var baseAtual = usuario.OfensivaCongeladaAte > DateTime.UtcNow
+                    ? usuario.OfensivaCongeladaAte.Value
+                    : DateTime.UtcNow;
+
+                usuario.OfensivaCongeladaAte = baseAtual.AddDays(produto.DuracaoDias.Value * dto.Quantidade);
+            }
+            else if (produto.Tipo == TipoProduto.MultiplicadorMoedas && produto.DuracaoDias.HasValue)
+            {
+                var baseAtual = usuario.MultiplicadorMoedasAte > DateTime.UtcNow
+                    ? usuario.MultiplicadorMoedasAte.Value
+                    : DateTime.UtcNow;
+
+                usuario.MultiplicadorMoedasAte = baseAtual.AddDays(produto.DuracaoDias.Value * dto.Quantidade);
+                usuario.MultiplicadorMoedasValor = produto.ValorMultiplicador;
+            }
+
             var historicoCompra = new ProdutoUsuario
             {
                 UsuarioId = dto.UsuarioId,
@@ -83,22 +94,21 @@ namespace Backend.Controllers
             };
             _context.ProdutoUsuarios.Add(historicoCompra);
 
-            // 🔥 DISPARO AUTOMÁTICO: Cria a notificação de sucesso da compra usando apenas 'Descricao'
-            var novaNotificacao = new Notificacao
+            _context.Notificacoes.Add(new Notificacao
             {
                 UsuarioId = dto.UsuarioId,
                 Descricao = $"Compra realizada com sucesso! 🛍️ Você adquiriu {dto.Quantidade}x {produto.Nome} por um total de {total} moedas."
-            };
-            _context.Notificacoes.Add(novaNotificacao);
+            });
 
-            // Salva todas as operações juntas de forma consistente
             await _context.SaveChangesAsync();
 
             return Ok(new
             {
                 message = "Compra realizada com sucesso!",
                 novoSaldo = usuario.SaldoAtual,
-                totalGasto = total
+                totalGasto = total,
+                ofensivaCongeladaAte = usuario.OfensivaCongeladaAte,
+                multiplicadorAte = usuario.MultiplicadorMoedasAte
             });
         }
 
@@ -106,6 +116,7 @@ namespace Backend.Controllers
         // 3. LISTAR PRODUTOS DA LOJA (GET: api/Produto)
         // ==========================================
         [HttpGet]
+        [Authorize]
         public async Task<ActionResult<IEnumerable<Produto>>> GetProdutos()
         {
             return await _context.Produtos.ToListAsync();
@@ -115,6 +126,7 @@ namespace Backend.Controllers
         // 4. BUSCAR PRODUTO POR ID (GET: api/Produto/5)
         // ==========================================
         [HttpGet("{id}")]
+        [Authorize]
         public async Task<ActionResult<Produto>> GetProdutoPorId(int id)
         {
             var produto = await _context.Produtos.FindAsync(id);
@@ -124,9 +136,10 @@ namespace Backend.Controllers
         }
 
         // ==========================================
-        // 5. ATUALIZAR PRODUTO (PUT: api/Produto/5)
+        // 5. ATUALIZAR PRODUTO (PUT: api/Produto/5) — somente Admin
         // ==========================================
         [HttpPut("{id}")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> PutProduto(int id, ProdutoCriacaoDto dto)
         {
             var produtoBanco = await _context.Produtos.FindAsync(id);
@@ -134,15 +147,19 @@ namespace Backend.Controllers
 
             produtoBanco.Nome = dto.Nome;
             produtoBanco.Preco = dto.Preco;
+            produtoBanco.Tipo = dto.Tipo;
+            produtoBanco.DuracaoDias = dto.DuracaoDias;
+            produtoBanco.ValorMultiplicador = dto.ValorMultiplicador;
 
             await _context.SaveChangesAsync();
             return NoContent();
         }
 
         // ==========================================
-        // 6. DELETAR PRODUTO DA LOJA (DELETE: api/Produto/5)
+        // 6. DELETAR PRODUTO DA LOJA (DELETE: api/Produto/5) — somente Admin
         // ==========================================
         [HttpDelete("{id}")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> DeleteProduto(int id)
         {
             var produto = await _context.Produtos.FindAsync(id);

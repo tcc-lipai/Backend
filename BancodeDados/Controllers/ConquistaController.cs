@@ -1,5 +1,7 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 using Backend.Data;
 using Backend.Dtos;
 using Backend.Models;
@@ -18,104 +20,61 @@ namespace Backend.Controllers
         }
 
         // ==========================================
-        // 1. CADASTRAR CONQUISTA (POST: api/Conquista)
+        // 1. CATÁLOGO COMPLETO (GET: api/Conquista) — todas que existem
+        // ==========================================
+        [HttpGet]
+        [Authorize]
+        public async Task<IActionResult> GetConquistas()
+        {
+            return Ok(await _context.Conquistas.ToListAsync());
+        }
+
+        // ==========================================
+        // 2. CRIAR NO CATÁLOGO (POST: api/Conquista) — somente Admin
         // ==========================================
         [HttpPost]
-        public async Task<ActionResult<Conquista>> PostConquista(ConquistaCriacaoDto dto)
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> PostConquista(ConquistaCriacaoDto dto)
         {
-            // Valida se o usuário informado existe
-            var usuarioExiste = await _context.Usuarios.AnyAsync(u => u.IdUsuario == dto.UsuarioId);
-            if (!usuarioExiste)
-            {
-                return BadRequest(new { message = "O Usuário informado não existe." });
-            }
-
-            // Cria a nova conquista baseada no DTO
             var novaConquista = new Conquista
             {
                 Nome = dto.Nome,
-                UsuarioId = dto.UsuarioId
+                Descricao = dto.Descricao,
+                IconeUrl = dto.IconeUrl
             };
+
             _context.Conquistas.Add(novaConquista);
-
-            // 🔥 DISPARO AUTOMÁTICO: Cria a notificação usando apenas 'Descricao'
-            var novaNotificacao = new Notificacao
-            {
-                UsuarioId = dto.UsuarioId,
-                Descricao = $"Nova Conquista Desbloqueada! 🏆 Parabéns, você ganhou a conquista: {dto.Nome}."
-            };
-            _context.Notificacoes.Add(novaNotificacao);
-
-            // Salva ambas as entidades juntas no banco de dados
             await _context.SaveChangesAsync();
 
             return CreatedAtAction(nameof(GetConquistaPorId), new { id = novaConquista.IdConquista }, novaConquista);
         }
 
-        // ==========================================
-        // 2. LISTAR TODAS (GET: api/Conquista)
-        // ==========================================
-        [HttpGet]
-        public async Task<ActionResult<IEnumerable<Conquista>>> GetConquistas()
-        {
-            return await _context.Conquistas.ToListAsync();
-        }
-
-        // ==========================================
-        // 3. BUSCAR POR ID (GET: api/Conquista/5)
-        // ==========================================
         [HttpGet("{id}")]
-        public async Task<ActionResult<Conquista>> GetConquistaPorId(int id)
+        [Authorize]
+        public async Task<IActionResult> GetConquistaPorId(int id)
         {
             var conquista = await _context.Conquistas.FindAsync(id);
-
-            if (conquista == null)
-            {
-                return NotFound(new { message = "Conquista não encontrada." });
-            }
-
-            return conquista;
+            if (conquista == null) return NotFound();
+            return Ok(conquista);
         }
 
-        // ==========================================
-        // 4. EDITAR CONQUISTA (PUT: api/Conquista/5)
-        // ==========================================
         [HttpPut("{id}")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> PutConquista(int id, ConquistaCriacaoDto dto)
         {
-            var conquistaBanco = await _context.Conquistas.FindAsync(id);
+            var conquista = await _context.Conquistas.FindAsync(id);
+            if (conquista == null) return NotFound();
 
-            if (conquistaBanco == null)
-            {
-                return NotFound(new { message = "Conquista não encontrada." });
-            }
+            conquista.Nome = dto.Nome;
+            conquista.Descricao = dto.Descricao;
+            conquista.IconeUrl = dto.IconeUrl;
 
-            var usuarioExiste = await _context.Usuarios.AnyAsync(u => u.IdUsuario == dto.UsuarioId);
-            if (!usuarioExiste)
-            {
-                return BadRequest(new { message = "O Usuário informado não existe." });
-            }
-
-            conquistaBanco.Nome = dto.Nome;
-            conquistaBanco.UsuarioId = dto.UsuarioId;
-
-            try
-            {
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!ConquistaExists(id)) return NotFound();
-                else throw;
-            }
-
+            await _context.SaveChangesAsync();
             return NoContent();
         }
 
-        // ==========================================
-        // 5. DELETAR CONQUISTA (DELETE: api/Conquista/5)
-        // ==========================================
         [HttpDelete("{id}")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> DeleteConquista(int id)
         {
             var conquista = await _context.Conquistas.FindAsync(id);
@@ -123,13 +82,81 @@ namespace Backend.Controllers
 
             _context.Conquistas.Remove(conquista);
             await _context.SaveChangesAsync();
-
             return NoContent();
         }
 
-        private bool ConquistaExists(int id)
+        // ==========================================
+        // 3. CONCEDER PRA UM USUARIO (POST: api/Conquista/conceder) — somente Admin
+        // (no futuro dá pra chamar isso de dentro do ProgressoController também,
+        // quando quiser automatizar critérios tipo "completou 10 lições")
+        // ==========================================
+        [HttpPost("conceder")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> ConcederConquista(ConcederConquistaDto dto)
         {
-            return _context.Conquistas.Any(e => e.IdConquista == id);
+            var usuario = await _context.Usuarios.FindAsync(dto.UsuarioId);
+            if (usuario == null)
+                return BadRequest(new { message = "O Usuário informado não existe." });
+
+            var conquista = await _context.Conquistas.FindAsync(dto.ConquistaId);
+            if (conquista == null)
+                return BadRequest(new { message = "A Conquista informada não existe." });
+
+            var jaTem = await _context.ConquistasUsuario
+                .AnyAsync(cu => cu.UsuarioId == dto.UsuarioId && cu.ConquistaId == dto.ConquistaId);
+            if (jaTem)
+                return BadRequest(new { message = "O usuário já possui essa conquista." });
+
+            _context.ConquistasUsuario.Add(new ConquistaUsuario
+            {
+                UsuarioId = dto.UsuarioId,
+                ConquistaId = dto.ConquistaId,
+                DataConquista = DateTime.UtcNow
+            });
+
+            _context.Notificacoes.Add(new Notificacao
+            {
+                UsuarioId = dto.UsuarioId,
+                Descricao = $"Nova Conquista Desbloqueada! 🏆 Parabéns, você ganhou a conquista: {conquista.Nome}."
+            });
+
+            await _context.SaveChangesAsync();
+            return Ok(new { message = "Conquista concedida com sucesso." });
+        }
+
+        // ==========================================
+        // 4. CONQUISTAS DO USUARIO — atingidas + não atingidas (tela do Figma)
+        // ==========================================
+        [HttpGet("usuario/{usuarioId}")]
+        [Authorize]
+        public async Task<IActionResult> GetConquistasUsuario(int usuarioId)
+        {
+            var role = User.FindFirstValue(ClaimTypes.Role);
+            var idLogado = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+
+            if (role == "Usuario" && idLogado != usuarioId) return Forbid();
+            if (role == "Profissional")
+            {
+                var ehPaciente = await _context.Usuarios
+                    .AnyAsync(u => u.IdUsuario == usuarioId && u.ProfissionalId == idLogado);
+                if (!ehPaciente) return Forbid();
+            }
+
+            var todasConquistas = await _context.Conquistas.ToListAsync();
+
+            var idsConquistadas = await _context.ConquistasUsuario
+                .Where(cu => cu.UsuarioId == usuarioId)
+                .ToDictionaryAsync(cu => cu.ConquistaId, cu => cu.DataConquista);
+
+            var atingidas = todasConquistas
+                .Where(c => idsConquistadas.ContainsKey(c.IdConquista))
+                .Select(c => new { c.IdConquista, c.Nome, c.Descricao, c.IconeUrl, DataConquista = idsConquistadas[c.IdConquista] });
+
+            var naoAtingidas = todasConquistas
+                .Where(c => !idsConquistadas.ContainsKey(c.IdConquista))
+                .Select(c => new { c.IdConquista, c.Nome, c.Descricao, c.IconeUrl });
+
+            return Ok(new { Atingidas = atingidas, NaoAtingidas = naoAtingidas });
         }
     }
 }

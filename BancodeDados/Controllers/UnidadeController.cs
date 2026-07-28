@@ -1,8 +1,9 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using Backend.Data;
+﻿using Backend.Data;
 using Backend.Dtos;
 using Backend.Models;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace Backend.Controllers
 {
@@ -19,6 +20,7 @@ namespace Backend.Controllers
 
         // GET: api/Unidades
         [HttpGet]
+        [Authorize]
         public async Task<ActionResult<IEnumerable<Unidade>>> GetUnidades()
         {
             // Retorna as unidades incluindo os 3 tipos de lições que ela possui
@@ -31,6 +33,7 @@ namespace Backend.Controllers
 
         // GET: api/Unidades/5
         [HttpGet("{id}")]
+        [Authorize]
         public async Task<ActionResult<Unidade>> GetUnidade(int id)
         {
             var unidade = await _context.Unidades
@@ -49,6 +52,7 @@ namespace Backend.Controllers
 
         // POST: api/Unidades
         [HttpPost]
+        [Authorize(Roles = "Admin")]
         public async Task<ActionResult<Unidade>> PostUnidade(UnidadeCriacaoDto dto)
         {
             // 1. Valida se a Atividade informada realmente existe no banco
@@ -75,6 +79,7 @@ namespace Backend.Controllers
 
         // PUT: api/Unidades/5
         [HttpPut("{id}")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> PutUnidade(int id, UnidadeCriacaoDto dto)
         {
             var unidadeBanco = await _context.Unidades.FindAsync(id);
@@ -109,6 +114,7 @@ namespace Backend.Controllers
 
         // DELETE: api/Unidades/5
         [HttpDelete("{id}")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> DeleteUnidade(int id)
         {
             var unidade = await _context.Unidades.FindAsync(id);

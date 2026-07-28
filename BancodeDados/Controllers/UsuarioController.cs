@@ -14,21 +14,22 @@ namespace Backend.Controllers
     public class UsuarioController : ControllerBase
     {
         private readonly AppDbContext _context;
-        private readonly JwtService _jwtService;
 
-        public UsuarioController(AppDbContext context, JwtService jwtService)
+        public UsuarioController(AppDbContext context)
         {
             _context = context;
-            _jwtService = jwtService;
         }
 
         // ==========================================
-        // 1. CADASTRO (POST: api/Usuario)
+        // 1. CADASTRO (POST: api/Usuario) — público.
+        // O Admin também usa ESSE MESMO endpoint pra criar um Usuario.
         // ==========================================
         [HttpPost]
         public async Task<ActionResult> PostUsuario(UsuarioCadastroDto dto)
         {
-            var emailExiste = await _context.Usuarios.AnyAsync(u => u.Email.ToLower() == dto.Email.ToLower());
+            var emailExiste = await _context.Usuarios.AnyAsync(u => u.Email.ToLower() == dto.Email.ToLower())
+                || await _context.Profissionais.AnyAsync(p => p.Email.ToLower() == dto.Email.ToLower());
+
             if (emailExiste)
                 return BadRequest(new { message = "Este e-mail já está em uso." });
 
@@ -69,31 +70,7 @@ namespace Backend.Controllers
         }
 
         // ==========================================
-        // 2. LOGIN (POST: api/Usuario/login)
-        // ==========================================
-        [HttpPost("login")]
-        public async Task<IActionResult> Login(LoginDto dto)
-        {
-            var usuario = await _context.Usuarios
-                .FirstOrDefaultAsync(u => u.Email.ToLower() == dto.Email.ToLower());
-
-            if (usuario == null || !PasswordHasher.Verify(dto.Senha, usuario.SenhaHash))
-                return Unauthorized(new { message = "E-mail ou senha incorretos." });
-
-            var token = _jwtService.GerarToken(usuario.IdUsuario, usuario.Nome, usuario.Email, "Usuario");
-
-            return Ok(new AuthResponseDto
-            {
-                Token = token,
-                Role = "Usuario",
-                Id = usuario.IdUsuario,
-                Nome = usuario.Nome,
-                Email = usuario.Email
-            });
-        }
-
-        // ==========================================
-        // 2b. VINCULAR A UM PROFISSIONAL (depois do cadastro)
+        // 2. VINCULAR A UM PROFISSIONAL (depois do cadastro) — só o próprio Usuario
         // ==========================================
         [HttpPost("vincular-profissional")]
         [Authorize(Roles = "Usuario")]
@@ -116,14 +93,17 @@ namespace Backend.Controllers
         }
 
         // ==========================================
-        // 3. EDITAR PERFIL (PUT: api/Usuario/5)
+        // 3. EDITAR — serve pro Usuario editar a si mesmo E pro Admin editar qualquer um
         // ==========================================
         [HttpPut("{id}")]
-        [Authorize(Roles = "Usuario")]
-        public async Task<IActionResult> PutUsuario(int id, UsuarioEdicaoDto dto)
+        [Authorize]
+        public async Task<IActionResult> PutUsuario(int id, UsuarioEdicaoAdminDto dto)
         {
-            var usuarioLogadoId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
-            if (usuarioLogadoId != id) return Forbid();
+            var role = User.FindFirstValue(ClaimTypes.Role);
+            var idLogado = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+
+            if (role == "Profissional") return Forbid();
+            if (role == "Usuario" && idLogado != id) return Forbid();
 
             var usuarioBanco = await _context.Usuarios.FindAsync(id);
             if (usuarioBanco == null)
@@ -131,9 +111,11 @@ namespace Backend.Controllers
 
             if (usuarioBanco.Email.ToLower() != dto.Email.ToLower())
             {
-                var emailExiste = await _context.Usuarios.AnyAsync(u => u.Email.ToLower() == dto.Email.ToLower() && u.IdUsuario != id);
+                var emailExiste = await _context.Usuarios.AnyAsync(u => u.Email.ToLower() == dto.Email.ToLower() && u.IdUsuario != id)
+                    || await _context.Profissionais.AnyAsync(p => p.Email.ToLower() == dto.Email.ToLower());
+
                 if (emailExiste)
-                    return BadRequest(new { message = "Este e-mail já está em uso por outro usuário." });
+                    return BadRequest(new { message = "Este e-mail já está em uso." });
             }
 
             usuarioBanco.Nome = dto.Nome;
@@ -142,6 +124,24 @@ namespace Backend.Controllers
                 usuarioBanco.SenhaHash = PasswordHasher.Hash(dto.Senha);
             usuarioBanco.Diagnostico = dto.Diagnostico;
             usuarioBanco.NivelDificuldade = dto.NivelDificuldade;
+
+            if (role == "Admin")
+            {
+                if (dto.CodigoProfissional == "")
+                {
+                    usuarioBanco.ProfissionalId = null;
+                }
+                else if (!string.IsNullOrWhiteSpace(dto.CodigoProfissional))
+                {
+                    var profissional = await _context.Profissionais
+                        .FirstOrDefaultAsync(p => p.CodigoAcesso == dto.CodigoProfissional);
+
+                    if (profissional == null)
+                        return BadRequest(new { message = "Código de profissional inválido." });
+
+                    usuarioBanco.ProfissionalId = profissional.IdProfissional;
+                }
+            }
 
             try
             {
@@ -157,7 +157,7 @@ namespace Backend.Controllers
         }
 
         // ==========================================
-        // 4. LISTAR TODOS (GET: api/Usuario) — apenas Admin
+        // 4. LISTAR TODOS — apenas Admin
         // ==========================================
         [HttpGet]
         [Authorize(Roles = "Admin")]
@@ -179,6 +179,10 @@ namespace Backend.Controllers
                 u.Email,
                 u.Diagnostico,
                 u.ProfissionalId,
+                u.DiasSeguidos,
+                u.UltimaAtividadeData,
+                OfensivaCongelada = u.OfensivaCongeladaAte > DateTime.UtcNow,
+                MultiplicadorAtivo = u.MultiplicadorMoedasAte > DateTime.UtcNow,
                 u.Notificacoes,
                 u.Conquistas,
                 ProdutosAdquiridos = u.ProdutoUsuarios.Select(pu => new
@@ -197,8 +201,7 @@ namespace Backend.Controllers
         }
 
         // ==========================================
-        // 5. BUSCAR POR ID (GET: api/Usuario/5)
-        // Usuario só vê a si mesmo; Profissional só vê seus pacientes; Admin vê todos
+        // 5. BUSCAR POR ID — Usuario (ele mesmo) / Profissional (se paciente dele) / Admin
         // ==========================================
         [HttpGet("{id}")]
         [Authorize]
@@ -231,6 +234,13 @@ namespace Backend.Controllers
                 usuario.Nome,
                 usuario.Email,
                 usuario.Diagnostico,
+                usuario.DiasSeguidos,
+                usuario.UltimaAtividadeData,
+                OfensivaCongelada = usuario.OfensivaCongeladaAte > DateTime.UtcNow,
+                OfensivaCongeladaAte = usuario.OfensivaCongeladaAte,
+                MultiplicadorAtivo = usuario.MultiplicadorMoedasAte > DateTime.UtcNow,
+                MultiplicadorMoedasAte = usuario.MultiplicadorMoedasAte,
+                MultiplicadorMoedasValor = usuario.MultiplicadorMoedasValor,
                 usuario.Notificacoes,
                 usuario.Conquistas,
                 ProdutosAdquiridos = usuario.ProdutoUsuarios.Select(pu => new
@@ -247,7 +257,7 @@ namespace Backend.Controllers
         }
 
         // ==========================================
-        // 6. DELETAR (DELETE: api/Usuario/5) — apenas Admin
+        // 6. DELETAR — apenas Admin
         // ==========================================
         [HttpDelete("{id}")]
         [Authorize(Roles = "Admin")]

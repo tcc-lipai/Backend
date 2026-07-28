@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Backend.Data;
 using Backend.Dtos;
@@ -18,108 +19,114 @@ namespace Backend.Controllers
         }
 
         // ==========================================
-        // 1. CRIAR DICIONÁRIO PARA USUÁRIO (POST: api/Dicionario)
+        // 1. LISTAR TODAS AS PALAVRAS (GET: api/Dicionario)
+        // Opcionalmente filtra por categoria: GET /api/Dicionario?categoriaId=2
         // ==========================================
-        [HttpPost]
-        public async Task<IActionResult> PostDicionario(DicionarioCriacaoDto dto)
+        [HttpGet]
+        [Authorize]
+        public async Task<IActionResult> GetPalavras([FromQuery] int? categoriaId)
         {
-            // Valida se o usuário existe
-            var usuarioExiste = await _context.Usuarios.AnyAsync(u => u.IdUsuario == dto.UsuarioId);
-            if (!usuarioExiste)
-            {
-                return BadRequest(new { message = "O Usuário informado não existe." });
-            }
+            var query = _context.Palavras.Include(p => p.Categoria).AsQueryable();
 
-            // Valida se o usuário já possui um dicionário criado
-            var jaPossuiDicionario = await _context.Dicionarios.AnyAsync(d => d.UsuarioId == dto.UsuarioId);
-            if (jaPossuiDicionario)
-            {
-                return BadRequest(new { message = "Este usuário já possui um dicionário vinculado." });
-            }
+            if (categoriaId.HasValue)
+                query = query.Where(p => p.CategoriaId == categoriaId.Value);
 
-            var novoDicionario = new Dicionario
-            {
-                UsuarioId = dto.UsuarioId
-            };
+            var palavras = await query
+                .Select(p => new
+                {
+                    p.IdPalavra,
+                    p.Nome,
+                    p.VideoUrl,
+                    p.CategoriaId,
+                    NomeCategoria = p.Categoria!.Nome
+                })
+                .ToListAsync();
 
-            _context.Dicionarios.Add(novoDicionario);
-            await _context.SaveChangesAsync();
-
-            return Ok(new { message = "Dicionário criado com sucesso!", idDicionario = novoDicionario.IdDicionario });
+            return Ok(palavras);
         }
 
         // ==========================================
-        // 2. ADICIONAR ITEM AO DICIONÁRIO (POST: api/Dicionario/add-item)
+        // 2. BUSCAR PALAVRA POR ID (GET: api/Dicionario/5)
         // ==========================================
-        [HttpPost("add-item")]
-        public async Task<IActionResult> AddItem(ItemDicionarioCriacaoDto dto)
+        [HttpGet("{id}")]
+        [Authorize]
+        public async Task<IActionResult> GetPalavraPorId(int id)
         {
-            // 1. Valida se o dicionário de destino existe
-            var dicionarioExiste = await _context.Dicionarios.AnyAsync(d => d.IdDicionario == dto.DicionarioId);
-            if (!dicionarioExiste)
-            {
-                return BadRequest(new { message = "O Dicionário informado não existe." });
-            }
+            var palavra = await _context.Palavras
+                .Include(p => p.Categoria)
+                .FirstOrDefaultAsync(p => p.IdPalavra == id);
 
-            // 2. Valida se a categoria informada existe
+            if (palavra == null)
+                return NotFound(new { message = "Palavra não encontrada." });
+
+            return Ok(new
+            {
+                palavra.IdPalavra,
+                palavra.Nome,
+                palavra.VideoUrl,
+                palavra.CategoriaId,
+                NomeCategoria = palavra.Categoria?.Nome
+            });
+        }
+
+        // ==========================================
+        // 3. CRIAR PALAVRA (POST: api/Dicionario) — somente Admin
+        // ==========================================
+        [HttpPost]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> PostPalavra(PalavraCriacaoDto dto)
+        {
             var categoriaExiste = await _context.Categorias.AnyAsync(c => c.IdCategoria == dto.CategoriaId);
             if (!categoriaExiste)
-            {
                 return BadRequest(new { message = "A Categoria informada não existe." });
-            }
 
-            // 3. Evita duplicidade (opcional, mas evita o usuário adicionar o mesmo item duas vezes)
-            var itemJaExiste = await _context.ItensDicionario.AnyAsync(i => i.DicionarioId == dto.DicionarioId && i.CategoriaId == dto.CategoriaId);
-            if (itemJaExiste)
+            var novaPalavra = new Palavra
             {
-                return BadRequest(new { message = "Esta categoria já foi adicionada a este dicionário." });
-            }
-
-            var novoItem = new ItemDicionario
-            {
-                DicionarioId = dto.DicionarioId,
+                Nome = dto.Nome,
+                VideoUrl = dto.VideoUrl,
                 CategoriaId = dto.CategoriaId
             };
 
-            _context.ItensDicionario.Add(novoItem);
+            _context.Palavras.Add(novaPalavra);
             await _context.SaveChangesAsync();
 
-            return Ok(new { message = "Item adicionado ao dicionário com sucesso!", idItemDicionario = novoItem.IdItemDicionario });
+            return CreatedAtAction(nameof(GetPalavraPorId), new { id = novaPalavra.IdPalavra }, novaPalavra);
         }
 
         // ==========================================
-        // 3. VER DICIONÁRIO POR ID DO USUÁRIO (GET: api/Dicionario/usuario/5)
+        // 4. EDITAR PALAVRA (PUT: api/Dicionario/5) — somente Admin
         // ==========================================
-        [HttpGet("usuario/{usuarioId}")]
-        public async Task<IActionResult> GetDicionarioPorUsuario(int usuarioId)
+        [HttpPut("{id}")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> PutPalavra(int id, PalavraCriacaoDto dto)
         {
-            // Traz o dicionário, a lista de itens dentro dele e inclui os detalhes da Categoria de cada item
-            var dicionario = await _context.Dicionarios
-                .Include(d => d.Itens)
-                    .ThenInclude(i => i.Categoria)
-                .FirstOrDefaultAsync(d => d.UsuarioId == usuarioId);
+            var palavra = await _context.Palavras.FindAsync(id);
+            if (palavra == null)
+                return NotFound(new { message = "Palavra não encontrada." });
 
-            if (dicionario == null)
-            {
-                return NotFound(new { message = "Dicionário não encontrado para este usuário." });
-            }
+            var categoriaExiste = await _context.Categorias.AnyAsync(c => c.IdCategoria == dto.CategoriaId);
+            if (!categoriaExiste)
+                return BadRequest(new { message = "A Categoria informada não existe." });
 
-            return Ok(dicionario);
+            palavra.Nome = dto.Nome;
+            palavra.VideoUrl = dto.VideoUrl;
+            palavra.CategoriaId = dto.CategoriaId;
+
+            await _context.SaveChangesAsync();
+            return NoContent();
         }
 
         // ==========================================
-        // 4. REMOVER ITEM DO DICIONÁRIO (DELETE: api/Dicionario/remove-item/5)
+        // 5. EXCLUIR PALAVRA (DELETE: api/Dicionario/5) — somente Admin
         // ==========================================
-        [HttpDelete("remove-item/{idItem}")]
-        public async Task<IActionResult> DeleteItem(int idItem)
+        [HttpDelete("{id}")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> DeletePalavra(int id)
         {
-            var item = await _context.ItensDicionario.FindAsync(idItem);
-            if (item == null)
-            {
-                return NotFound(new { message = "Item não encontrado no dicionário." });
-            }
+            var palavra = await _context.Palavras.FindAsync(id);
+            if (palavra == null) return NotFound();
 
-            _context.ItensDicionario.Remove(item);
+            _context.Palavras.Remove(palavra);
             await _context.SaveChangesAsync();
 
             return NoContent();

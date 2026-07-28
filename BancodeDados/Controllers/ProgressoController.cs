@@ -66,18 +66,26 @@ namespace Backend.Controllers
 
             progresso.RespostaDada = dto.RespostaDada;
             progresso.Correta = correta;
-            progresso.PontuacaoObtida = correta ? progresso.LicaoAlternativa.ValorGanho : 0;
             progresso.Status = StatusProgresso.Concluido;
             progresso.DataConclusao = DateTime.UtcNow;
 
+            AtualizarOfensiva(usuario!);
+
             if (correta)
             {
-                usuario!.SaldoAtual += progresso.PontuacaoObtida;
+                var valorFinal = AplicarMultiplicador(usuario!, progresso.LicaoAlternativa.ValorGanho);
+                progresso.PontuacaoObtida = valorFinal;
+                usuario!.SaldoAtual += valorFinal;
+
                 _context.Notificacoes.Add(new Notificacao
                 {
                     UsuarioId = UsuarioLogadoId,
-                    Descricao = $"Lição concluída! 🎉 Você acertou e ganhou {progresso.PontuacaoObtida} moedas."
+                    Descricao = $"Lição concluída! 🎉 Você acertou e ganhou {valorFinal} moedas."
                 });
+            }
+            else
+            {
+                progresso.PontuacaoObtida = 0;
             }
 
             await _context.SaveChangesAsync();
@@ -136,18 +144,26 @@ namespace Backend.Controllers
 
             progresso.TextoReconhecidoPelaIA = dto.TextoReconhecidoPelaIA;
             progresso.Correta = correta;
-            progresso.PontuacaoObtida = correta ? progresso.LicaoFala.ValorGanho : 0;
             progresso.Status = StatusProgresso.Concluido;
             progresso.DataConclusao = DateTime.UtcNow;
 
+            AtualizarOfensiva(usuario!);
+
             if (correta)
             {
-                usuario!.SaldoAtual += progresso.PontuacaoObtida;
+                var valorFinal = AplicarMultiplicador(usuario!, progresso.LicaoFala.ValorGanho);
+                progresso.PontuacaoObtida = valorFinal;
+                usuario!.SaldoAtual += valorFinal;
+
                 _context.Notificacoes.Add(new Notificacao
                 {
                     UsuarioId = UsuarioLogadoId,
-                    Descricao = $"Lição concluída! 🗣️ Você acertou a fala e ganhou {progresso.PontuacaoObtida} moedas."
+                    Descricao = $"Lição concluída! 🗣️ Você acertou a fala e ganhou {valorFinal} moedas."
                 });
+            }
+            else
+            {
+                progresso.PontuacaoObtida = 0;
             }
 
             await _context.SaveChangesAsync();
@@ -221,6 +237,36 @@ namespace Backend.Controllers
                 .ToListAsync();
 
             return Ok(new { Alternativas = alternativas, Falas = falas });
+        }
+
+        // ==========================================
+        // HELPERS PRIVADOS — ofensiva e multiplicador de moedas
+        // ==========================================
+        private void AtualizarOfensiva(Usuario usuario)
+        {
+            var hoje = DateTime.UtcNow.Date;
+
+            if (usuario.UltimaAtividadeData?.Date == hoje)
+                return; // já contou hoje, não mexe de novo
+
+            var ontem = hoje.AddDays(-1);
+            bool manteveSequencia = usuario.UltimaAtividadeData?.Date == ontem
+                || (usuario.OfensivaCongeladaAte.HasValue && usuario.OfensivaCongeladaAte.Value.Date >= ontem);
+
+            usuario.DiasSeguidos = manteveSequencia ? usuario.DiasSeguidos + 1 : 1;
+            usuario.UltimaAtividadeData = hoje;
+        }
+
+        private decimal AplicarMultiplicador(Usuario usuario, decimal valorBase)
+        {
+            if (usuario.MultiplicadorMoedasAte.HasValue
+                && usuario.MultiplicadorMoedasAte.Value >= DateTime.UtcNow
+                && usuario.MultiplicadorMoedasValor.HasValue)
+            {
+                return valorBase * usuario.MultiplicadorMoedasValor.Value;
+            }
+
+            return valorBase;
         }
     }
 }

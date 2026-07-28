@@ -67,59 +67,50 @@ namespace Backend.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("IdConquista"));
 
+                    b.Property<string>("Descricao")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("IconeUrl")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("Nome")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<int>("UsuarioId")
+                    b.Property<int?>("UsuarioIdUsuario")
                         .HasColumnType("int");
 
                     b.HasKey("IdConquista");
 
-                    b.HasIndex("UsuarioId");
+                    b.HasIndex("UsuarioIdUsuario");
 
                     b.ToTable("Conquistas");
                 });
 
-            modelBuilder.Entity("Backend.Models.Dicionario", b =>
+            modelBuilder.Entity("Backend.Models.ConquistaUsuario", b =>
                 {
-                    b.Property<int>("IdDicionario")
+                    b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("IdDicionario"));
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("ConquistaId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("DataConquista")
+                        .HasColumnType("datetime2");
 
                     b.Property<int>("UsuarioId")
                         .HasColumnType("int");
 
-                    b.HasKey("IdDicionario");
+                    b.HasKey("Id");
+
+                    b.HasIndex("ConquistaId");
 
                     b.HasIndex("UsuarioId");
 
-                    b.ToTable("Dicionarios");
-                });
-
-            modelBuilder.Entity("Backend.Models.ItemDicionario", b =>
-                {
-                    b.Property<int>("IdItemDicionario")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("IdItemDicionario"));
-
-                    b.Property<int>("CategoriaId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("DicionarioId")
-                        .HasColumnType("int");
-
-                    b.HasKey("IdItemDicionario");
-
-                    b.HasIndex("CategoriaId");
-
-                    b.HasIndex("DicionarioId");
-
-                    b.ToTable("ItensDicionario");
+                    b.ToTable("ConquistasUsuario");
                 });
 
             modelBuilder.Entity("Backend.Models.LicaoAlternativa", b =>
@@ -257,6 +248,34 @@ namespace Backend.Migrations
                     b.ToTable("LicoesVideo");
                 });
 
+            modelBuilder.Entity("Backend.Models.MensagemContato", b =>
+                {
+                    b.Property<int>("IdMensagem")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("IdMensagem"));
+
+                    b.Property<DateTime>("DataEnvio")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Mensagem")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("Respondida")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("UsuarioId")
+                        .HasColumnType("int");
+
+                    b.HasKey("IdMensagem");
+
+                    b.HasIndex("UsuarioId");
+
+                    b.ToTable("MensagensContato");
+                });
+
             modelBuilder.Entity("Backend.Models.Notificacao", b =>
                 {
                     b.Property<int>("IdNotificacao")
@@ -265,9 +284,15 @@ namespace Backend.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("IdNotificacao"));
 
+                    b.Property<DateTime>("DataCriacao")
+                        .HasColumnType("datetime2");
+
                     b.Property<string>("Descricao")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("Lida")
+                        .HasColumnType("bit");
 
                     b.Property<int>("UsuarioId")
                         .HasColumnType("int");
@@ -279,6 +304,32 @@ namespace Backend.Migrations
                     b.ToTable("Notificacoes");
                 });
 
+            modelBuilder.Entity("Backend.Models.Palavra", b =>
+                {
+                    b.Property<int>("IdPalavra")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("IdPalavra"));
+
+                    b.Property<int>("CategoriaId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Nome")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("VideoUrl")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("IdPalavra");
+
+                    b.HasIndex("CategoriaId");
+
+                    b.ToTable("Palavras");
+                });
+
             modelBuilder.Entity("Backend.Models.Produto", b =>
                 {
                     b.Property<int>("IdProduto")
@@ -287,11 +338,20 @@ namespace Backend.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("IdProduto"));
 
+                    b.Property<int?>("DuracaoDias")
+                        .HasColumnType("int");
+
                     b.Property<string>("Nome")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<decimal>("Preco")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("Tipo")
+                        .HasColumnType("int");
+
+                    b.Property<decimal?>("ValorMultiplicador")
                         .HasColumnType("decimal(18,2)");
 
                     b.HasKey("IdProduto");
@@ -487,9 +547,18 @@ namespace Backend.Migrations
                     b.Property<string>("Diagnostico")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<int>("DiasSeguidos")
+                        .HasColumnType("int");
+
                     b.Property<string>("Email")
                         .IsRequired()
                         .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTime?>("MultiplicadorMoedasAte")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal?>("MultiplicadorMoedasValor")
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<int>("NivelDificuldade")
                         .HasColumnType("int");
@@ -497,6 +566,9 @@ namespace Backend.Migrations
                     b.Property<string>("Nome")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("OfensivaCongeladaAte")
+                        .HasColumnType("datetime2");
 
                     b.Property<int?>("ProfissionalId")
                         .HasColumnType("int");
@@ -508,6 +580,9 @@ namespace Backend.Migrations
                     b.Property<string>("SenhaHash")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("UltimaAtividadeData")
+                        .HasColumnType("datetime2");
 
                     b.HasKey("IdUsuario");
 
@@ -521,43 +596,28 @@ namespace Backend.Migrations
 
             modelBuilder.Entity("Backend.Models.Conquista", b =>
                 {
-                    b.HasOne("Backend.Models.Usuario", "Usuario")
+                    b.HasOne("Backend.Models.Usuario", null)
                         .WithMany("Conquistas")
-                        .HasForeignKey("UsuarioId")
+                        .HasForeignKey("UsuarioIdUsuario");
+                });
+
+            modelBuilder.Entity("Backend.Models.ConquistaUsuario", b =>
+                {
+                    b.HasOne("Backend.Models.Conquista", "Conquista")
+                        .WithMany()
+                        .HasForeignKey("ConquistaId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("Usuario");
-                });
-
-            modelBuilder.Entity("Backend.Models.Dicionario", b =>
-                {
                     b.HasOne("Backend.Models.Usuario", "Usuario")
                         .WithMany()
                         .HasForeignKey("UsuarioId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.Navigation("Conquista");
+
                     b.Navigation("Usuario");
-                });
-
-            modelBuilder.Entity("Backend.Models.ItemDicionario", b =>
-                {
-                    b.HasOne("Backend.Models.Categoria", "Categoria")
-                        .WithMany("Itens")
-                        .HasForeignKey("CategoriaId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("Backend.Models.Dicionario", "Dicionario")
-                        .WithMany("Itens")
-                        .HasForeignKey("DicionarioId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Categoria");
-
-                    b.Navigation("Dicionario");
                 });
 
             modelBuilder.Entity("Backend.Models.LicaoAlternativa", b =>
@@ -604,6 +664,17 @@ namespace Backend.Migrations
                     b.Navigation("Unidade");
                 });
 
+            modelBuilder.Entity("Backend.Models.MensagemContato", b =>
+                {
+                    b.HasOne("Backend.Models.Usuario", "Usuario")
+                        .WithMany()
+                        .HasForeignKey("UsuarioId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Usuario");
+                });
+
             modelBuilder.Entity("Backend.Models.Notificacao", b =>
                 {
                     b.HasOne("Backend.Models.Usuario", "Usuario")
@@ -613,6 +684,17 @@ namespace Backend.Migrations
                         .IsRequired();
 
                     b.Navigation("Usuario");
+                });
+
+            modelBuilder.Entity("Backend.Models.Palavra", b =>
+                {
+                    b.HasOne("Backend.Models.Categoria", "Categoria")
+                        .WithMany("Palavras")
+                        .HasForeignKey("CategoriaId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Categoria");
                 });
 
             modelBuilder.Entity("Backend.Models.ProdutoUsuario", b =>
@@ -700,12 +782,7 @@ namespace Backend.Migrations
 
             modelBuilder.Entity("Backend.Models.Categoria", b =>
                 {
-                    b.Navigation("Itens");
-                });
-
-            modelBuilder.Entity("Backend.Models.Dicionario", b =>
-                {
-                    b.Navigation("Itens");
+                    b.Navigation("Palavras");
                 });
 
             modelBuilder.Entity("Backend.Models.Produto", b =>
