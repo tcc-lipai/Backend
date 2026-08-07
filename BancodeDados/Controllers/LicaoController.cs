@@ -1,9 +1,11 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Backend.Data;
 using Backend.Dtos;
 using Backend.Models;
+using Backend.Services;
 
 namespace Backend.Controllers
 {
@@ -16,6 +18,24 @@ namespace Backend.Controllers
         public LicaoController(AppDbContext context)
         {
             _context = context;
+        }
+
+        // Retorna null se pode acessar; retorna o IActionResult de erro se não pode.
+        // Admin e Profissional sempre passam (não são eles que "fazem" a lição).
+        private async Task<IActionResult?> VerificarAcesso(bool ehVibracao)
+        {
+            var role = User.FindFirstValue(ClaimTypes.Role);
+            if (role != "Usuario") return null;
+
+            var usuarioId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+            var usuario = await _context.Usuarios.FindAsync(usuarioId);
+            if (usuario == null) return NotFound();
+
+            bool pode = ehVibracao
+                ? RegraNivelService.PodeAcessarVibracao(usuario.NivelDificuldade)
+                : RegraNivelService.PodeAcessarOutrosTipos(usuario.NivelDificuldade);
+
+            return pode ? null : Forbid();
         }
 
         // ==========================================
@@ -52,6 +72,9 @@ namespace Backend.Controllers
         [Authorize]
         public async Task<IActionResult> GetAlternativaPorId(int id)
         {
+            var bloqueio = await VerificarAcesso(ehVibracao: false);
+            if (bloqueio != null) return bloqueio;
+
             var licao = await _context.LicoesAlternativa.FindAsync(id);
             if (licao == null) return NotFound();
             return Ok(licao);
@@ -118,6 +141,9 @@ namespace Backend.Controllers
         [Authorize]
         public async Task<IActionResult> GetFalaPorId(int id)
         {
+            var bloqueio = await VerificarAcesso(ehVibracao: false);
+            if (bloqueio != null) return bloqueio;
+
             var licao = await _context.LicoesFala.FindAsync(id);
             if (licao == null) return NotFound();
             return Ok(licao);
@@ -179,6 +205,9 @@ namespace Backend.Controllers
         [Authorize]
         public async Task<IActionResult> GetVideoPorId(int id)
         {
+            var bloqueio = await VerificarAcesso(ehVibracao: false);
+            if (bloqueio != null) return bloqueio;
+
             var licao = await _context.LicoesVideo.FindAsync(id);
             if (licao == null) return NotFound();
             return Ok(licao);
@@ -239,6 +268,9 @@ namespace Backend.Controllers
         [Authorize]
         public async Task<IActionResult> GetVibracaoPorId(int id)
         {
+            var bloqueio = await VerificarAcesso(ehVibracao: true);
+            if (bloqueio != null) return bloqueio;
+
             var licao = await _context.LicoesVibracao.FindAsync(id);
             if (licao == null) return NotFound();
             return Ok(licao);

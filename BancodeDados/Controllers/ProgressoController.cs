@@ -1,10 +1,11 @@
-﻿using System.Security.Claims;
+﻿using Backend.Data;
+using Backend.Dtos;
+using Backend.Models;
+using Backend.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Backend.Data;
-using Backend.Dtos;
-using Backend.Models;
+using System.Security.Claims;
 
 namespace Backend.Controllers
 {
@@ -29,6 +30,12 @@ namespace Backend.Controllers
         [Authorize(Roles = "Usuario")]
         public async Task<IActionResult> IniciarAlternativa(int licaoId)
         {
+            var usuario = await _context.Usuarios.FindAsync(UsuarioLogadoId);
+            if (usuario == null) return NotFound();
+
+            if (!RegraNivelService.PodeAcessarOutrosTipos(usuario.NivelDificuldade))
+                return Forbid();
+
             var licao = await _context.LicoesAlternativa.FindAsync(licaoId);
             if (licao == null) return NotFound(new { message = "Lição não encontrada." });
 
@@ -105,6 +112,13 @@ namespace Backend.Controllers
         [Authorize(Roles = "Usuario")]
         public async Task<IActionResult> IniciarFala(int licaoId)
         {
+
+            var usuario = await _context.Usuarios.FindAsync(UsuarioLogadoId);
+            if (usuario == null) return NotFound();
+
+            if (!RegraNivelService.PodeAcessarOutrosTipos(usuario.NivelDificuldade))
+                return Forbid();
+
             var licao = await _context.LicoesFala.FindAsync(licaoId);
             if (licao == null) return NotFound(new { message = "Lição não encontrada." });
 
