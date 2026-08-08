@@ -3519,23 +3519,23 @@
     ]
   },
   "packageFolders": {
-    "C:\\Users\\Cintia\\.nuget\\packages\\": {},
+    "C:\\Users\\TESTE2\\.nuget\\packages\\": {},
     "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages": {}
   },
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Users\\Cintia\\source\\repos\\Backend\\BancodeDados\\Backend.csproj",
+      "projectUniqueName": "C:\\Users\\TESTE2\\source\\repos\\Backend\\BancodeDados\\Backend.csproj",
       "projectName": "Backend",
-      "projectPath": "C:\\Users\\Cintia\\source\\repos\\Backend\\BancodeDados\\Backend.csproj",
-      "packagesPath": "C:\\Users\\Cintia\\.nuget\\packages\\",
-      "outputPath": "C:\\Users\\Cintia\\source\\repos\\Backend\\BancodeDados\\obj\\",
+      "projectPath": "C:\\Users\\TESTE2\\source\\repos\\Backend\\BancodeDados\\Backend.csproj",
+      "packagesPath": "C:\\Users\\TESTE2\\.nuget\\packages\\",
+      "outputPath": "C:\\Users\\TESTE2\\source\\repos\\Backend\\BancodeDados\\obj\\",
       "projectStyle": "PackageReference",
       "fallbackFolders": [
         "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
       ],
       "configFilePaths": [
-        "C:\\Users\\Cintia\\AppData\\Roaming\\NuGet\\NuGet.Config",
+        "C:\\Users\\TESTE2\\AppData\\Roaming\\NuGet\\NuGet.Config",
         "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
         "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
       ],
@@ -3544,6 +3544,7 @@
       ],
       "sources": {
         "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
+        "C:\\Program Files\\dotnet\\library-packs": {},
         "https://api.nuget.org/v3/index.json": {}
       },
       "frameworks": {
@@ -3626,7 +3627,7 @@
             "privateAssets": "all"
           }
         },
-        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.302/PortableRuntimeIdentifierGraph.json",
+        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.301/PortableRuntimeIdentifierGraph.json",
         "packagesToPrune": {
           "Microsoft.AspNetCore": "(,10.0.32767]",
           "Microsoft.AspNetCore.Antiforgery": "(,10.0.32767]",
