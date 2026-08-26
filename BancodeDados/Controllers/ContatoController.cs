@@ -21,9 +21,13 @@ namespace Backend.Controllers
         }
 
         // ==========================================
-        // 1. ENVIAR MENSAGEM (POST: api/Contato) — qualquer autenticado
+        // 1. ENVIAR MENSAGEM (POST: api/Contato) — somente Usuario
+        // (MensagemContato.UsuarioId só referencia a tabela Usuarios; Admin usa id=0
+        // e Profissional tem sua própria sequência de IDs, então nenhum dos dois
+        // pode gravar aqui sem violar a FK.)
         // ==========================================
         [HttpPost]
+        [Authorize(Roles = "Usuario")]
         public async Task<IActionResult> PostMensagem(MensagemContatoCriacaoDto dto)
         {
             var usuarioId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);

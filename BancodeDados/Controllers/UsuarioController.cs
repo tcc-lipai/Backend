@@ -165,7 +165,8 @@ namespace Backend.Controllers
         {
             var usuarios = await _context.Usuarios
                 .Include(u => u.Notificacoes)
-                .Include(u => u.Conquistas)
+                .Include(u => u.ConquistasUsuario)
+                    .ThenInclude(cu => cu.Conquista)
                 .Include(u => u.ProdutoUsuarios)
                     .ThenInclude(pu => pu.Produto)
                 .ToListAsync();
@@ -184,7 +185,14 @@ namespace Backend.Controllers
                 OfensivaCongelada = u.OfensivaCongeladaAte > DateTime.UtcNow,
                 MultiplicadorAtivo = u.MultiplicadorMoedasAte > DateTime.UtcNow,
                 u.Notificacoes,
-                u.Conquistas,
+                Conquistas = u.ConquistasUsuario.Select(cu => new
+                {
+                    cu.ConquistaId,
+                    NomeConquista = cu.Conquista?.Nome,
+                    cu.Conquista?.Descricao,
+                    cu.Conquista?.IconeUrl,
+                    cu.DataConquista
+                }),
                 ProdutosAdquiridos = u.ProdutoUsuarios.Select(pu => new
                 {
                     pu.Id,
@@ -212,7 +220,8 @@ namespace Backend.Controllers
 
             var usuario = await _context.Usuarios
                 .Include(u => u.Notificacoes)
-                .Include(u => u.Conquistas)
+                .Include(u => u.ConquistasUsuario)
+                    .ThenInclude(cu => cu.Conquista)
                 .Include(u => u.ProdutoUsuarios)
                     .ThenInclude(pu => pu.Produto)
                 .FirstOrDefaultAsync(u => u.IdUsuario == id);
@@ -242,7 +251,14 @@ namespace Backend.Controllers
                 MultiplicadorMoedasAte = usuario.MultiplicadorMoedasAte,
                 MultiplicadorMoedasValor = usuario.MultiplicadorMoedasValor,
                 usuario.Notificacoes,
-                usuario.Conquistas,
+                Conquistas = usuario.ConquistasUsuario.Select(cu => new
+                {
+                    cu.ConquistaId,
+                    NomeConquista = cu.Conquista?.Nome,
+                    cu.Conquista?.Descricao,
+                    cu.Conquista?.IconeUrl,
+                    cu.DataConquista
+                }),
                 ProdutosAdquiridos = usuario.ProdutoUsuarios.Select(pu => new
                 {
                     pu.Id,

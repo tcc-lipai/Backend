@@ -104,12 +104,7 @@ namespace Backend.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<int?>("UsuarioIdUsuario")
-                        .HasColumnType("int");
-
                     b.HasKey("IdConquista");
-
-                    b.HasIndex("UsuarioIdUsuario");
 
                     b.ToTable("Conquistas");
                 });
@@ -135,7 +130,8 @@ namespace Backend.Migrations
 
                     b.HasIndex("ConquistaId");
 
-                    b.HasIndex("UsuarioId");
+                    b.HasIndex("UsuarioId", "ConquistaId")
+                        .IsUnique();
 
                     b.ToTable("ConquistasUsuario");
                 });
@@ -640,13 +636,6 @@ namespace Backend.Migrations
                     b.Navigation("Usuario");
                 });
 
-            modelBuilder.Entity("Backend.Models.Conquista", b =>
-                {
-                    b.HasOne("Backend.Models.Usuario", null)
-                        .WithMany("Conquistas")
-                        .HasForeignKey("UsuarioIdUsuario");
-                });
-
             modelBuilder.Entity("Backend.Models.ConquistaUsuario", b =>
                 {
                     b.HasOne("Backend.Models.Conquista", "Conquista")
@@ -656,7 +645,7 @@ namespace Backend.Migrations
                         .IsRequired();
 
                     b.HasOne("Backend.Models.Usuario", "Usuario")
-                        .WithMany()
+                        .WithMany("ConquistasUsuario")
                         .HasForeignKey("UsuarioId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -767,7 +756,7 @@ namespace Backend.Migrations
                     b.HasOne("Backend.Models.LicaoAlternativa", "LicaoAlternativa")
                         .WithMany()
                         .HasForeignKey("LicaoAlternativaId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("Backend.Models.Usuario", "Usuario")
@@ -786,7 +775,7 @@ namespace Backend.Migrations
                     b.HasOne("Backend.Models.LicaoFala", "LicaoFala")
                         .WithMany()
                         .HasForeignKey("LicaoFalaId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("Backend.Models.Usuario", "Usuario")
@@ -854,7 +843,7 @@ namespace Backend.Migrations
 
             modelBuilder.Entity("Backend.Models.Usuario", b =>
                 {
-                    b.Navigation("Conquistas");
+                    b.Navigation("ConquistasUsuario");
 
                     b.Navigation("Notificacoes");
 

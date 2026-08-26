@@ -19,7 +19,7 @@ namespace Backend.Models
         public Profissional? Profissional { get; set; }
 
         public List<Notificacao> Notificacoes { get; set; } = new();
-        public List<Conquista> Conquistas { get; set; } = new();
+        public List<ConquistaUsuario> ConquistasUsuario { get; set; } = new();
         public List<ProdutoUsuario> ProdutoUsuarios { get; set; } = new();
 
 

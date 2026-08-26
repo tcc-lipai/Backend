@@ -20,6 +20,19 @@ builder.Services.AddControllers()
 
 builder.Services.AddSingleton<JwtService>();
 
+// ===== CORS =====
+// Liberado geral por enquanto (fase de desenvolvimento do TCC) — quando o front
+// tiver domínio/URL definitivo, trocar AllowAnyOrigin por WithOrigins(...).
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAll", policy =>
+    {
+        policy.AllowAnyOrigin()
+              .AllowAnyMethod()
+              .AllowAnyHeader();
+    });
+});
+
 // ===== JWT =====
 var jwtSettings = builder.Configuration.GetSection("Jwt");
 builder.Services.AddAuthentication(options =>
@@ -83,6 +96,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+app.UseCors("AllowAll");
 app.UseAuthentication(); // TEM que vir antes do UseAuthorization
 app.UseAuthorization();
 app.MapControllers();

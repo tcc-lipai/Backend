@@ -19,9 +19,10 @@ namespace Backend.Controllers
         }
 
         // ==========================================
-        // 1. CADASTRAR CATEGORIA (POST: api/Categorias)
+        // 1. CADASTRAR CATEGORIA (POST: api/Categorias) — somente Admin
         // ==========================================
         [HttpPost]
+        [Authorize(Roles = "Admin")]
         public async Task<ActionResult<Categoria>> PostCategoria(CategoriaCriacaoDto dto)
         {
             // Evita cadastrar categorias com nomes duplicados (opcional, mas uma boa prática)
@@ -74,9 +75,10 @@ namespace Backend.Controllers
         }
 
         // ==========================================
-        // 4. EDITAR CATEGORIA (PUT: api/Categorias/5)
+        // 4. EDITAR CATEGORIA (PUT: api/Categorias/5) — somente Admin
         // ==========================================
         [HttpPut("{id}")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> PutCategoria(int id, CategoriaCriacaoDto dto)
         {
             var categoriaBanco = await _context.Categorias.FindAsync(id);
@@ -111,9 +113,10 @@ namespace Backend.Controllers
         }
 
         // ==========================================
-        // 5. DELETAR CATEGORIA (DELETE: api/Categorias/5)
+        // 5. DELETAR CATEGORIA (DELETE: api/Categorias/5) — somente Admin
         // ==========================================
         [HttpDelete("{id}")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> DeleteCategoria(int id)
         {
             var categoria = await _context.Categorias.FindAsync(id);

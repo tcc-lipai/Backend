@@ -31,6 +31,13 @@ namespace Backend.Controllers
             if (role == "Usuario" && idLogado != usuarioId)
                 return Forbid();
 
+            if (role == "Profissional")
+            {
+                var ehPaciente = await _context.Usuarios
+                    .AnyAsync(u => u.IdUsuario == usuarioId && u.ProfissionalId == idLogado);
+                if (!ehPaciente) return Forbid();
+            }
+
             var notificacoes = await _context.Notificacoes
                 .Where(n => n.UsuarioId == usuarioId)
                 .OrderByDescending(n => n.DataCriacao)
@@ -43,6 +50,7 @@ namespace Backend.Controllers
         // 2. MARCAR COMO LIDA (PUT: api/Notificacoes/5)
         // ==========================================
         [HttpPut("{id}")]
+        [Authorize(Roles = "Usuario")]
         public async Task<IActionResult> PutNotificacao(int id, NotificacaoAtualizacaoDto dto)
         {
             var idLogado = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);

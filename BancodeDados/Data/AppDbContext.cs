@@ -62,6 +62,36 @@ namespace Backend.Data
                 .WithMany(p => p.ProdutoUsuarios)
                 .HasForeignKey(pu => pu.ProdutoId);
 
+            // Tabela associativa Conquista <-> Usuario
+            modelBuilder.Entity<ConquistaUsuario>()
+                .HasOne(cu => cu.Usuario)
+                .WithMany(u => u.ConquistasUsuario)
+                .HasForeignKey(cu => cu.UsuarioId);
+
+            modelBuilder.Entity<ConquistaUsuario>()
+                .HasOne(cu => cu.Conquista)
+                .WithMany()
+                .HasForeignKey(cu => cu.ConquistaId);
+
+            // Não permite conceder a mesma conquista duas vezes pro mesmo usuário
+            modelBuilder.Entity<ConquistaUsuario>()
+                .HasIndex(cu => new { cu.UsuarioId, cu.ConquistaId })
+                .IsUnique();
+
+            // Não deixa apagar uma Lição que já tem progresso registrado —
+            // protege o histórico do paciente de ser perdido por cascade.
+            modelBuilder.Entity<ProgressoAlternativa>()
+                .HasOne(p => p.LicaoAlternativa)
+                .WithMany()
+                .HasForeignKey(p => p.LicaoAlternativaId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<ProgressoFala>()
+                .HasOne(p => p.LicaoFala)
+                .WithMany()
+                .HasForeignKey(p => p.LicaoFalaId)
+                .OnDelete(DeleteBehavior.Restrict);
+
             // Precisão decimal
             modelBuilder.Entity<Usuario>()
                 .Property(u => u.SaldoAtual)

@@ -5,7 +5,10 @@ using Backend.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Globalization;
 using System.Security.Claims;
+using System.Text;
+using System.Text.RegularExpressions;
 
 namespace Backend.Controllers
 {
@@ -38,6 +41,14 @@ namespace Backend.Controllers
 
             var licao = await _context.LicoesAlternativa.FindAsync(licaoId);
             if (licao == null) return NotFound(new { message = "Lição não encontrada." });
+
+            var progressoExistente = await _context.ProgressosAlternativa
+                .FirstOrDefaultAsync(p => p.UsuarioId == UsuarioLogadoId
+                    && p.LicaoAlternativaId == licaoId
+                    && p.Status == StatusProgresso.EmAndamento);
+
+            if (progressoExistente != null)
+                return Ok(new { progressoExistente.IdProgresso });
 
             var progresso = new ProgressoAlternativa
             {
@@ -122,6 +133,14 @@ namespace Backend.Controllers
             var licao = await _context.LicoesFala.FindAsync(licaoId);
             if (licao == null) return NotFound(new { message = "Lição não encontrada." });
 
+            var progressoExistente = await _context.ProgressosFala
+                .FirstOrDefaultAsync(p => p.UsuarioId == UsuarioLogadoId
+                    && p.LicaoFalaId == licaoId
+                    && p.Status == StatusProgresso.EmAndamento);
+
+            if (progressoExistente != null)
+                return Ok(new { progressoExistente.IdProgresso });
+
             var progresso = new ProgressoFala
             {
                 UsuarioId = UsuarioLogadoId,
@@ -153,8 +172,7 @@ namespace Backend.Controllers
 
             var usuario = await _context.Usuarios.FindAsync(UsuarioLogadoId);
 
-            bool correta = progresso.LicaoFala!.FraseEsperada.Trim()
-                .Equals(dto.TextoReconhecidoPelaIA.Trim(), StringComparison.OrdinalIgnoreCase);
+            bool correta = Normalizar(progresso.LicaoFala!.FraseEsperada) == Normalizar(dto.TextoReconhecidoPelaIA);
 
             progresso.TextoReconhecidoPelaIA = dto.TextoReconhecidoPelaIA;
             progresso.Correta = correta;
@@ -207,16 +225,20 @@ namespace Backend.Controllers
                 if (!ehPaciente) return Forbid();
             }
 
-            var totalAlternativas = await _context.ProgressosAlternativa.CountAsync(p => p.UsuarioId == usuarioId);
+            // Taxa de ACERTO entre as tentativas concluídas (não taxa de conclusão) —
+            // uma lição concluída errada não deve contar como desempenho positivo.
             var concluidasAlternativas = await _context.ProgressosAlternativa
                 .CountAsync(p => p.UsuarioId == usuarioId && p.Status == StatusProgresso.Concluido);
+            var corretasAlternativas = await _context.ProgressosAlternativa
+                .CountAsync(p => p.UsuarioId == usuarioId && p.Status == StatusProgresso.Concluido && p.Correta);
 
-            var totalFala = await _context.ProgressosFala.CountAsync(p => p.UsuarioId == usuarioId);
             var concluidasFala = await _context.ProgressosFala
                 .CountAsync(p => p.UsuarioId == usuarioId && p.Status == StatusProgresso.Concluido);
+            var corretasFala = await _context.ProgressosFala
+                .CountAsync(p => p.UsuarioId == usuarioId && p.Status == StatusProgresso.Concluido && p.Correta);
 
-            double percentInterpretacao = totalAlternativas == 0 ? 0 : (double)concluidasAlternativas / totalAlternativas * 100;
-            double percentFala = totalFala == 0 ? 0 : (double)concluidasFala / totalFala * 100;
+            double percentInterpretacao = concluidasAlternativas == 0 ? 0 : (double)corretasAlternativas / concluidasAlternativas * 100;
+            double percentFala = concluidasFala == 0 ? 0 : (double)corretasFala / concluidasFala * 100;
 
             return Ok(new
             {
@@ -254,8 +276,28 @@ namespace Backend.Controllers
         }
 
         // ==========================================
-        // HELPERS PRIVADOS — ofensiva e multiplicador de moedas
+        // HELPERS PRIVADOS — ofensiva, multiplicador de moedas e comparação de fala
         // ==========================================
+
+        // Ignora acento, caixa, pontuação e espaços duplicados — a transcrição da IA
+        // de voz raramente vem idêntica em pontuação/acentuação ao texto esperado.
+        private static string Normalizar(string texto)
+        {
+            var semAcento = texto.Normalize(NormalizationForm.FormD);
+            var sb = new StringBuilder();
+            foreach (var c in semAcento)
+            {
+                if (CharUnicodeInfo.GetUnicodeCategory(c) != UnicodeCategory.NonSpacingMark)
+                    sb.Append(c);
+            }
+
+            var resultado = sb.ToString().Normalize(NormalizationForm.FormC);
+            resultado = Regex.Replace(resultado, @"[^\w\s]", "");
+            resultado = Regex.Replace(resultado, @"\s+", " ").Trim();
+
+            return resultado.ToUpperInvariant();
+        }
+
         private void AtualizarOfensiva(Usuario usuario)
         {
             var hoje = DateTime.UtcNow.Date;

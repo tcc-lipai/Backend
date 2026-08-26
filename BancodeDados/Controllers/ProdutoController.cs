@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Backend.Data;
@@ -17,6 +18,8 @@ namespace Backend.Controllers
         {
             _context = context;
         }
+
+        private int UsuarioLogadoId => int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
 
         // ==========================================
         // 1. CADASTRAR PRODUTO NA LOJA (POST: api/Produto) — somente Admin
@@ -47,7 +50,7 @@ namespace Backend.Controllers
         [Authorize(Roles = "Usuario")]
         public async Task<IActionResult> ComprarProduto(CompraProdutoDto dto)
         {
-            var usuario = await _context.Usuarios.FindAsync(dto.UsuarioId);
+            var usuario = await _context.Usuarios.FindAsync(UsuarioLogadoId);
             if (usuario == null)
                 return NotFound(new { message = "Usuário não encontrado." });
 
@@ -86,7 +89,7 @@ namespace Backend.Controllers
 
             var historicoCompra = new ProdutoUsuario
             {
-                UsuarioId = dto.UsuarioId,
+                UsuarioId = UsuarioLogadoId,
                 ProdutoId = dto.ProdutoId,
                 Qtde = dto.Quantidade,
                 TotalCompra = total,
@@ -96,7 +99,7 @@ namespace Backend.Controllers
 
             _context.Notificacoes.Add(new Notificacao
             {
-                UsuarioId = dto.UsuarioId,
+                UsuarioId = UsuarioLogadoId,
                 Descricao = $"Compra realizada com sucesso! 🛍️ Você adquiriu {dto.Quantidade}x {produto.Nome} por um total de {total} moedas."
             });
 
