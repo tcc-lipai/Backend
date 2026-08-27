@@ -1,14 +1,13 @@
-﻿using Backend.Data;
+using Backend.Data;
 using Backend.Dtos;
 using Backend.Models;
 using Backend.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using System.Globalization;
+using System.Net.Http.Headers;
+using System.Net.Http.Json;
 using System.Security.Claims;
-using System.Text;
-using System.Text.RegularExpressions;
 
 namespace Backend.Controllers
 {
@@ -18,17 +17,20 @@ namespace Backend.Controllers
     public class ProgressoController : ControllerBase
     {
         private readonly AppDbContext _context;
+        private readonly IHttpClientFactory _httpClientFactory;
+        private readonly IConfiguration _config;
 
-        public ProgressoController(AppDbContext context)
+        private const double LimiarAcertoFala = 70.0;
+
+        public ProgressoController(AppDbContext context, IHttpClientFactory httpClientFactory, IConfiguration config)
         {
             _context = context;
+            _httpClientFactory = httpClientFactory;
+            _config = config;
         }
 
         private int UsuarioLogadoId => int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
 
-        // ==========================================
-        // ALTERNATIVA
-        // ==========================================
         [HttpPost("alternativa/{licaoId}/iniciar")]
         [Authorize(Roles = "Usuario")]
         public async Task<IActionResult> IniciarAlternativa(int licaoId)
@@ -116,9 +118,6 @@ namespace Backend.Controllers
             });
         }
 
-        // ==========================================
-        // FALA
-        // ==========================================
         [HttpPost("fala/{licaoId}/iniciar")]
         [Authorize(Roles = "Usuario")]
         public async Task<IActionResult> IniciarFala(int licaoId)
@@ -155,11 +154,10 @@ namespace Backend.Controllers
             return Ok(new { progresso.IdProgresso });
         }
 
-        // Recebe o texto já reconhecido pela IA de voz (isso roda fora do backend .NET —
-        // o front manda o áudio pra IA, e manda só o texto transcrito de volta pra cá)
         [HttpPost("fala/{idProgresso}/concluir")]
         [Authorize(Roles = "Usuario")]
-        public async Task<IActionResult> ConcluirFala(int idProgresso, ResponderFalaDto dto)
+        [Consumes("multipart/form-data")]
+        public async Task<IActionResult> ConcluirFala(int idProgresso, IFormFile arquivo)
         {
             var progresso = await _context.ProgressosFala
                 .Include(p => p.LicaoFala)
@@ -170,11 +168,24 @@ namespace Backend.Controllers
             if (progresso.Status == StatusProgresso.Concluido)
                 return BadRequest(new { message = "Essa tentativa já foi concluída." });
 
+            if (arquivo == null || arquivo.Length == 0)
+                return BadRequest(new { message = "Nenhum arquivo de áudio enviado." });
+
             var usuario = await _context.Usuarios.FindAsync(UsuarioLogadoId);
 
-            bool correta = Normalizar(progresso.LicaoFala!.FraseEsperada) == Normalizar(dto.TextoReconhecidoPelaIA);
+            AvaliacaoFalaIaDto avaliacao;
+            try
+            {
+                avaliacao = await AvaliarAudioComIa(progresso.LicaoFala!.FraseEsperada, arquivo);
+            }
+            catch (HttpRequestException)
+            {
+                return StatusCode(502, new { message = "Não foi possível avaliar o áudio — o serviço de IA está indisponível." });
+            }
 
-            progresso.TextoReconhecidoPelaIA = dto.TextoReconhecidoPelaIA;
+            bool correta = avaliacao.ScoreGeral >= LimiarAcertoFala;
+
+            progresso.TextoReconhecidoPelaIA = avaliacao.TextoFalado;
             progresso.Correta = correta;
             progresso.Status = StatusProgresso.Concluido;
             progresso.DataConclusao = DateTime.UtcNow;
@@ -204,13 +215,35 @@ namespace Backend.Controllers
             {
                 progresso.Correta,
                 progresso.PontuacaoObtida,
+                ScoreAcustico = avaliacao.ScoreGeral,
+                TextoReconhecido = avaliacao.TextoFalado,
                 NovoSaldo = usuario!.SaldoAtual
             });
         }
 
-        // ==========================================
-        // DESEMPENHO (gráficos do dashboard e da tela do profissional)
-        // ==========================================
+        private async Task<AvaliacaoFalaIaDto> AvaliarAudioComIa(string textoEsperado, IFormFile arquivo)
+        {
+            var baseUrl = _config["Ia:MmsBaseUrl"] ?? "http://127.0.0.1:8000";
+
+            using var conteudoAudio = new StreamContent(arquivo.OpenReadStream());
+            conteudoAudio.Headers.ContentType = new MediaTypeHeaderValue(arquivo.ContentType ?? "audio/wav");
+
+            using var form = new MultipartFormDataContent
+            {
+                { new StringContent(textoEsperado), "texto_esperado" },
+                { conteudoAudio, "arquivo", arquivo.FileName }
+            };
+
+            var httpClient = _httpClientFactory.CreateClient();
+            var resposta = await httpClient.PostAsync($"{baseUrl}/avaliar-fala-alinhada/", form);
+
+            if (!resposta.IsSuccessStatusCode)
+                throw new HttpRequestException($"Serviço de IA retornou {(int)resposta.StatusCode}.");
+
+            var resultado = await resposta.Content.ReadFromJsonAsync<AvaliacaoFalaIaDto>();
+            return resultado ?? throw new HttpRequestException("Resposta vazia do serviço de IA.");
+        }
+
         [HttpGet("desempenho/{usuarioId}")]
         public async Task<IActionResult> GetDesempenho(int usuarioId)
         {
@@ -225,8 +258,6 @@ namespace Backend.Controllers
                 if (!ehPaciente) return Forbid();
             }
 
-            // Taxa de ACERTO entre as tentativas concluídas (não taxa de conclusão) —
-            // uma lição concluída errada não deve contar como desempenho positivo.
             var concluidasAlternativas = await _context.ProgressosAlternativa
                 .CountAsync(p => p.UsuarioId == usuarioId && p.Status == StatusProgresso.Concluido);
             var corretasAlternativas = await _context.ProgressosAlternativa
@@ -247,9 +278,6 @@ namespace Backend.Controllers
             });
         }
 
-        // ==========================================
-        // LISTA DE PROGRESSO DO USUARIO ("Início Atividades" / "Continuar atividade")
-        // ==========================================
         [HttpGet("usuario/{usuarioId}")]
         public async Task<IActionResult> GetProgressoUsuario(int usuarioId)
         {
@@ -275,35 +303,12 @@ namespace Backend.Controllers
             return Ok(new { Alternativas = alternativas, Falas = falas });
         }
 
-        // ==========================================
-        // HELPERS PRIVADOS — ofensiva, multiplicador de moedas e comparação de fala
-        // ==========================================
-
-        // Ignora acento, caixa, pontuação e espaços duplicados — a transcrição da IA
-        // de voz raramente vem idêntica em pontuação/acentuação ao texto esperado.
-        private static string Normalizar(string texto)
-        {
-            var semAcento = texto.Normalize(NormalizationForm.FormD);
-            var sb = new StringBuilder();
-            foreach (var c in semAcento)
-            {
-                if (CharUnicodeInfo.GetUnicodeCategory(c) != UnicodeCategory.NonSpacingMark)
-                    sb.Append(c);
-            }
-
-            var resultado = sb.ToString().Normalize(NormalizationForm.FormC);
-            resultado = Regex.Replace(resultado, @"[^\w\s]", "");
-            resultado = Regex.Replace(resultado, @"\s+", " ").Trim();
-
-            return resultado.ToUpperInvariant();
-        }
-
         private void AtualizarOfensiva(Usuario usuario)
         {
             var hoje = DateTime.UtcNow.Date;
 
             if (usuario.UltimaAtividadeData?.Date == hoje)
-                return; // já contou hoje, não mexe de novo
+                return;
 
             var ontem = hoje.AddDays(-1);
             bool manteveSequencia = usuario.UltimaAtividadeData?.Date == ontem

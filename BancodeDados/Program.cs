@@ -29,8 +29,8 @@ builder.Services.AddControllers()
     });
 
 builder.Services.AddSingleton<JwtService>();
+builder.Services.AddHttpClient();
 
-// ===== JWT =====
 var jwtSettings = builder.Configuration.GetSection("Jwt");
 builder.Services.AddAuthentication(options =>
 {
@@ -93,7 +93,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 app.UseCors("PermitirTudo");
-app.UseAuthentication(); // TEM que vir antes do UseAuthorization
+app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 

@@ -1,4 +1,4 @@
-﻿using System.Security.Claims;
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -20,10 +20,6 @@ namespace Backend.Controllers
             _context = context;
         }
 
-        // ==========================================
-        // 1. CADASTRO (POST: api/Usuario) — público.
-        // O Admin também usa ESSE MESMO endpoint pra criar um Usuario.
-        // ==========================================
         [HttpPost]
         public async Task<ActionResult> PostUsuario(UsuarioCadastroDto dto)
         {
@@ -69,9 +65,6 @@ namespace Backend.Controllers
             });
         }
 
-        // ==========================================
-        // 2. VINCULAR A UM PROFISSIONAL (depois do cadastro) — só o próprio Usuario
-        // ==========================================
         [HttpPost("vincular-profissional")]
         [Authorize(Roles = "Usuario")]
         public async Task<IActionResult> VincularProfissional(VincularProfissionalDto dto)
@@ -92,9 +85,6 @@ namespace Backend.Controllers
             return Ok(new { message = "Conta vinculada com sucesso." });
         }
 
-        // ==========================================
-        // 3. EDITAR — serve pro Usuario editar a si mesmo E pro Admin editar qualquer um
-        // ==========================================
         [HttpPut("{id}")]
         [Authorize]
         public async Task<IActionResult> PutUsuario(int id, UsuarioEdicaoAdminDto dto)
@@ -156,9 +146,6 @@ namespace Backend.Controllers
             return NoContent();
         }
 
-        // ==========================================
-        // 4. LISTAR TODOS — apenas Admin
-        // ==========================================
         [HttpGet]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> GetUsuarios()
@@ -184,7 +171,13 @@ namespace Backend.Controllers
                 u.UltimaAtividadeData,
                 OfensivaCongelada = u.OfensivaCongeladaAte > DateTime.UtcNow,
                 MultiplicadorAtivo = u.MultiplicadorMoedasAte > DateTime.UtcNow,
-                u.Notificacoes,
+                Notificacoes = u.Notificacoes.Select(n => new
+                {
+                    n.IdNotificacao,
+                    n.Descricao,
+                    n.Lida,
+                    n.DataCriacao
+                }),
                 Conquistas = u.ConquistasUsuario.Select(cu => new
                 {
                     cu.ConquistaId,
@@ -208,9 +201,6 @@ namespace Backend.Controllers
             return Ok(resultado);
         }
 
-        // ==========================================
-        // 5. BUSCAR POR ID — Usuario (ele mesmo) / Profissional (se paciente dele) / Admin
-        // ==========================================
         [HttpGet("{id}")]
         [Authorize]
         public async Task<IActionResult> GetUsuarioPorId(int id)
@@ -250,7 +240,13 @@ namespace Backend.Controllers
                 MultiplicadorAtivo = usuario.MultiplicadorMoedasAte > DateTime.UtcNow,
                 MultiplicadorMoedasAte = usuario.MultiplicadorMoedasAte,
                 MultiplicadorMoedasValor = usuario.MultiplicadorMoedasValor,
-                usuario.Notificacoes,
+                Notificacoes = usuario.Notificacoes.Select(n => new
+                {
+                    n.IdNotificacao,
+                    n.Descricao,
+                    n.Lida,
+                    n.DataCriacao
+                }),
                 Conquistas = usuario.ConquistasUsuario.Select(cu => new
                 {
                     cu.ConquistaId,
@@ -272,9 +268,6 @@ namespace Backend.Controllers
             });
         }
 
-        // ==========================================
-        // 6. DELETAR — apenas Admin
-        // ==========================================
         [HttpDelete("{id}")]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> DeleteUsuario(int id)

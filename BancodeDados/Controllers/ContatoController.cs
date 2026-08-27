@@ -1,4 +1,4 @@
-﻿using System.Security.Claims;
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -20,12 +20,6 @@ namespace Backend.Controllers
             _context = context;
         }
 
-        // ==========================================
-        // 1. ENVIAR MENSAGEM (POST: api/Contato) — somente Usuario
-        // (MensagemContato.UsuarioId só referencia a tabela Usuarios; Admin usa id=0
-        // e Profissional tem sua própria sequência de IDs, então nenhum dos dois
-        // pode gravar aqui sem violar a FK.)
-        // ==========================================
         [HttpPost]
         [Authorize(Roles = "Usuario")]
         public async Task<IActionResult> PostMensagem(MensagemContatoCriacaoDto dto)
@@ -45,9 +39,6 @@ namespace Backend.Controllers
             return Ok(new { message = "Mensagem enviada com sucesso!" });
         }
 
-        // ==========================================
-        // 2. LISTAR MENSAGENS (GET: api/Contato) — somente Admin
-        // ==========================================
         [HttpGet]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> GetMensagens()
@@ -69,9 +60,6 @@ namespace Backend.Controllers
             return Ok(mensagens);
         }
 
-        // ==========================================
-        // 3. MARCAR COMO RESPONDIDA (PUT: api/Contato/5) — somente Admin
-        // ==========================================
         [HttpPut("{id}")]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> MarcarRespondida(int id)

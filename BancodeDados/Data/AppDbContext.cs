@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Backend.Models;
 
 namespace Backend.Data
@@ -29,12 +29,10 @@ namespace Backend.Data
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-            // E-mail único (Usuario)
             modelBuilder.Entity<Usuario>()
                 .HasIndex(u => u.Email)
                 .IsUnique();
 
-            // E-mail e Código de Acesso únicos (Profissional)
             modelBuilder.Entity<Profissional>()
                 .HasIndex(p => p.Email)
                 .IsUnique();
@@ -43,15 +41,12 @@ namespace Backend.Data
                 .HasIndex(p => p.CodigoAcesso)
                 .IsUnique();
 
-            // Vínculo opcional Usuario -> Profissional
-            // Se o profissional for removido, o usuário não é apagado, só desvincula.
             modelBuilder.Entity<Usuario>()
                 .HasOne(u => u.Profissional)
                 .WithMany(p => p.Pacientes)
                 .HasForeignKey(u => u.ProfissionalId)
                 .OnDelete(DeleteBehavior.SetNull);
 
-            // Tabela associativa Produto <-> Usuario
             modelBuilder.Entity<ProdutoUsuario>()
                 .HasOne(pu => pu.Usuario)
                 .WithMany(u => u.ProdutoUsuarios)
@@ -62,7 +57,6 @@ namespace Backend.Data
                 .WithMany(p => p.ProdutoUsuarios)
                 .HasForeignKey(pu => pu.ProdutoId);
 
-            // Tabela associativa Conquista <-> Usuario
             modelBuilder.Entity<ConquistaUsuario>()
                 .HasOne(cu => cu.Usuario)
                 .WithMany(u => u.ConquistasUsuario)
@@ -73,13 +67,10 @@ namespace Backend.Data
                 .WithMany()
                 .HasForeignKey(cu => cu.ConquistaId);
 
-            // Não permite conceder a mesma conquista duas vezes pro mesmo usuário
             modelBuilder.Entity<ConquistaUsuario>()
                 .HasIndex(cu => new { cu.UsuarioId, cu.ConquistaId })
                 .IsUnique();
 
-            // Não deixa apagar uma Lição que já tem progresso registrado —
-            // protege o histórico do paciente de ser perdido por cascade.
             modelBuilder.Entity<ProgressoAlternativa>()
                 .HasOne(p => p.LicaoAlternativa)
                 .WithMany()
@@ -92,7 +83,6 @@ namespace Backend.Data
                 .HasForeignKey(p => p.LicaoFalaId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            // Precisão decimal
             modelBuilder.Entity<Usuario>()
                 .Property(u => u.SaldoAtual)
                 .HasPrecision(18, 2);

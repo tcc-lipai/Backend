@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
@@ -19,9 +19,6 @@ namespace Backend.Controllers
             _context = context;
         }
 
-        // ==========================================
-        // 1. CATÁLOGO COMPLETO (GET: api/Conquista) — todas que existem
-        // ==========================================
         [HttpGet]
         [Authorize]
         public async Task<IActionResult> GetConquistas()
@@ -29,9 +26,6 @@ namespace Backend.Controllers
             return Ok(await _context.Conquistas.ToListAsync());
         }
 
-        // ==========================================
-        // 2. CRIAR NO CATÁLOGO (POST: api/Conquista) — somente Admin
-        // ==========================================
         [HttpPost]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> PostConquista(ConquistaCriacaoDto dto)
@@ -85,11 +79,6 @@ namespace Backend.Controllers
             return NoContent();
         }
 
-        // ==========================================
-        // 3. CONCEDER PRA UM USUARIO (POST: api/Conquista/conceder) — somente Admin
-        // (no futuro dá pra chamar isso de dentro do ProgressoController também,
-        // quando quiser automatizar critérios tipo "completou 10 lições")
-        // ==========================================
         [HttpPost("conceder")]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> ConcederConquista(ConcederConquistaDto dto)
@@ -124,9 +113,6 @@ namespace Backend.Controllers
             return Ok(new { message = "Conquista concedida com sucesso." });
         }
 
-        // ==========================================
-        // 4. CONQUISTAS DO USUARIO — atingidas + não atingidas (tela do Figma)
-        // ==========================================
         [HttpGet("usuario/{usuarioId}")]
         [Authorize]
         public async Task<IActionResult> GetConquistasUsuario(int usuarioId)

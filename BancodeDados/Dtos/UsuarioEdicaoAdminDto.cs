@@ -1,4 +1,5 @@
-﻿using Backend.Models;
+﻿using System.ComponentModel.DataAnnotations;
+using Backend.Models;
 
 namespace Backend.Dtos
 {
@@ -6,8 +7,10 @@ namespace Backend.Dtos
     {
         public string Nome { get; set; } = string.Empty;
         public string Email { get; set; } = string.Empty;
-        public string? Senha { get; set; } // opcional
+        public string? Senha { get; set; }
         public string? Diagnostico { get; set; }
+
+        [Range(1, 4, ErrorMessage = "Informe um nível de dificuldade válido (1 a 4).")]
         public NivelDificuldade NivelDificuldade { get; set; }
 
         public string? CodigoProfissional { get; set; }

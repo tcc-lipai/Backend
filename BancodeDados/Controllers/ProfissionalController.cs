@@ -1,4 +1,4 @@
-﻿using System.Security.Claims;
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -20,9 +20,6 @@ namespace Backend.Controllers
             _context = context;
         }
 
-        // ==========================================
-        // CRIAR (somente Admin)
-        // ==========================================
         [HttpPost]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> CriarProfissional(ProfissionalCadastroDto dto)
@@ -60,9 +57,6 @@ namespace Backend.Controllers
             });
         }
 
-        // ==========================================
-        // LISTAR (somente Admin)
-        // ==========================================
         [HttpGet]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> GetProfissionais()
@@ -82,9 +76,6 @@ namespace Backend.Controllers
             return Ok(profissionais);
         }
 
-        // ==========================================
-        // BUSCAR POR ID (somente Admin)
-        // ==========================================
         [HttpGet("{id}")]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> GetProfissionalPorId(int id)
@@ -107,9 +98,6 @@ namespace Backend.Controllers
             });
         }
 
-        // ==========================================
-        // EDITAR (somente Admin)
-        // ==========================================
         [HttpPut("{id}")]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> EditarProfissional(int id, ProfissionalEdicaoDto dto)
@@ -137,9 +125,6 @@ namespace Backend.Controllers
             return NoContent();
         }
 
-        // ==========================================
-        // EXCLUIR (somente Admin)
-        // ==========================================
         [HttpDelete("{id}")]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> ExcluirProfissional(int id)
@@ -154,9 +139,6 @@ namespace Backend.Controllers
             return NoContent();
         }
 
-        // ==========================================
-        // "Seus Pacientes" (tela do Profissional logado)
-        // ==========================================
         [HttpGet("pacientes")]
         [Authorize(Roles = "Profissional")]
         public async Task<IActionResult> GetPacientes()

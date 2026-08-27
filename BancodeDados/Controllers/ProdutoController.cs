@@ -1,4 +1,4 @@
-﻿using System.Security.Claims;
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -21,9 +21,6 @@ namespace Backend.Controllers
 
         private int UsuarioLogadoId => int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
 
-        // ==========================================
-        // 1. CADASTRAR PRODUTO NA LOJA (POST: api/Produto) — somente Admin
-        // ==========================================
         [HttpPost]
         [Authorize(Roles = "Admin")]
         public async Task<ActionResult<Produto>> PostProduto(ProdutoCriacaoDto dto)
@@ -43,9 +40,6 @@ namespace Backend.Controllers
             return CreatedAtAction(nameof(GetProdutoPorId), new { id = novoProduto.IdProduto }, novoProduto);
         }
 
-        // ==========================================
-        // 2. COMPRAR PRODUTO (POST: api/Produto/comprar) — Usuario
-        // ==========================================
         [HttpPost("comprar")]
         [Authorize(Roles = "Usuario")]
         public async Task<IActionResult> ComprarProduto(CompraProdutoDto dto)
@@ -68,7 +62,6 @@ namespace Backend.Controllers
 
             usuario.SaldoAtual -= total;
 
-            // Aplica o efeito do produto, se ele tiver um
             if (produto.Tipo == TipoProduto.BloqueioOfensiva && produto.DuracaoDias.HasValue)
             {
                 var baseAtual = usuario.OfensivaCongeladaAte > DateTime.UtcNow
@@ -115,9 +108,6 @@ namespace Backend.Controllers
             });
         }
 
-        // ==========================================
-        // 3. LISTAR PRODUTOS DA LOJA (GET: api/Produto)
-        // ==========================================
         [HttpGet]
         [Authorize]
         public async Task<ActionResult<IEnumerable<Produto>>> GetProdutos()
@@ -125,9 +115,6 @@ namespace Backend.Controllers
             return await _context.Produtos.ToListAsync();
         }
 
-        // ==========================================
-        // 4. BUSCAR PRODUTO POR ID (GET: api/Produto/5)
-        // ==========================================
         [HttpGet("{id}")]
         [Authorize]
         public async Task<ActionResult<Produto>> GetProdutoPorId(int id)
@@ -138,9 +125,6 @@ namespace Backend.Controllers
             return produto;
         }
 
-        // ==========================================
-        // 5. ATUALIZAR PRODUTO (PUT: api/Produto/5) — somente Admin
-        // ==========================================
         [HttpPut("{id}")]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> PutProduto(int id, ProdutoCriacaoDto dto)
@@ -158,9 +142,6 @@ namespace Backend.Controllers
             return NoContent();
         }
 
-        // ==========================================
-        // 6. DELETAR PRODUTO DA LOJA (DELETE: api/Produto/5) — somente Admin
-        // ==========================================
         [HttpDelete("{id}")]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> DeleteProduto(int id)

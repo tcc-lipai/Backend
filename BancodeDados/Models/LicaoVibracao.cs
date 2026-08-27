@@ -7,7 +7,7 @@ namespace Backend.Models
         [Key]
         public int IdLicaoVibracao { get; set; }
 
-        public string Silaba { get; set; } = string.Empty; // "Pa", "Ba", "Ca"...
+        public string Silaba { get; set; } = string.Empty;
         public string Instrucao { get; set; } = string.Empty;
 
         public int UnidadeId { get; set; }

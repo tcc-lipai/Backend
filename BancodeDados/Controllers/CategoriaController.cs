@@ -1,4 +1,4 @@
-﻿using Backend.Data;
+using Backend.Data;
 using Backend.Dtos;
 using Backend.Models;
 using Microsoft.AspNetCore.Authorization;
@@ -18,14 +18,10 @@ namespace Backend.Controllers
             _context = context;
         }
 
-        // ==========================================
-        // 1. CADASTRAR CATEGORIA (POST: api/Categorias) — somente Admin
-        // ==========================================
         [HttpPost]
         [Authorize(Roles = "Admin")]
         public async Task<ActionResult<Categoria>> PostCategoria(CategoriaCriacaoDto dto)
         {
-            // Evita cadastrar categorias com nomes duplicados (opcional, mas uma boa prática)
             var categoriaExiste = await _context.Categorias
                 .AnyAsync(c => c.Nome.ToLower() == dto.Nome.ToLower());
 
@@ -45,9 +41,6 @@ namespace Backend.Controllers
             return CreatedAtAction(nameof(GetCategoriaPorId), new { id = novaCategoria.IdCategoria }, novaCategoria);
         }
 
-        // ==========================================
-        // 2. LISTAR TODAS (GET: api/Categorias)
-        // ==========================================
         [HttpGet]
         [Authorize]
         public async Task<ActionResult<IEnumerable<Categoria>>> GetCategorias()
@@ -57,9 +50,6 @@ namespace Backend.Controllers
                 .ToListAsync();
         }
 
-        // ==========================================
-        // 3. BUSCAR POR ID (GET: api/Categorias/5)
-        // ==========================================
         [HttpGet("{id}")]
         [Authorize]
         public async Task<ActionResult<Categoria>> GetCategoriaPorId(int id)
@@ -74,9 +64,6 @@ namespace Backend.Controllers
             return categoria;
         }
 
-        // ==========================================
-        // 4. EDITAR CATEGORIA (PUT: api/Categorias/5) — somente Admin
-        // ==========================================
         [HttpPut("{id}")]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> PutCategoria(int id, CategoriaCriacaoDto dto)
@@ -88,7 +75,6 @@ namespace Backend.Controllers
                 return NotFound(new { message = "Categoria não encontrada." });
             }
 
-            // Valida duplicidade ao renomear
             var nomeExiste = await _context.Categorias
                 .AnyAsync(c => c.Nome.ToLower() == dto.Nome.ToLower() && c.IdCategoria != id);
 
@@ -112,9 +98,6 @@ namespace Backend.Controllers
             return NoContent();
         }
 
-        // ==========================================
-        // 5. DELETAR CATEGORIA (DELETE: api/Categorias/5) — somente Admin
-        // ==========================================
         [HttpDelete("{id}")]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> DeleteCategoria(int id)
@@ -122,8 +105,6 @@ namespace Backend.Controllers
             var categoria = await _context.Categorias.FindAsync(id);
             if (categoria == null) return NotFound();
 
-            // Dica de amigo: Se houver itens vinculados a essa categoria no dicionário,
-            // o banco pode travar a deleção dependendo da sua configuração de Cascade.
             _context.Categorias.Remove(categoria);
             await _context.SaveChangesAsync();
 

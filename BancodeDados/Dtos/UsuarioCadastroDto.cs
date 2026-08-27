@@ -14,7 +14,7 @@ namespace Backend.Dtos
         [Required, MinLength(6)]
         public string Senha { get; set; } = string.Empty;
 
-        [Required]
+        [Range(1, 4, ErrorMessage = "Informe um nível de dificuldade válido (1 a 4).")]
         public NivelDificuldade NivelDificuldade { get; set; }
 
         public string? Diagnostico { get; set; }

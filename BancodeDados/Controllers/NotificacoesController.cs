@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
@@ -19,9 +19,6 @@ namespace Backend.Controllers
             _context = context;
         }
 
-        // ==========================================
-        // 1. BUSCAR NOTIFICAÇÕES DO USUÁRIO (GET: api/Notificacoes/usuario/5)
-        // ==========================================
         [HttpGet("usuario/{usuarioId}")]
         public async Task<IActionResult> GetNotificacoesPorUsuario(int usuarioId)
         {
@@ -46,9 +43,6 @@ namespace Backend.Controllers
             return Ok(notificacoes);
         }
 
-        // ==========================================
-        // 2. MARCAR COMO LIDA (PUT: api/Notificacoes/5)
-        // ==========================================
         [HttpPut("{id}")]
         [Authorize(Roles = "Usuario")]
         public async Task<IActionResult> PutNotificacao(int id, NotificacaoAtualizacaoDto dto)

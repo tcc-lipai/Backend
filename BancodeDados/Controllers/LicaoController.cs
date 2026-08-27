@@ -1,4 +1,4 @@
-﻿using System.Security.Claims;
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -20,8 +20,6 @@ namespace Backend.Controllers
             _context = context;
         }
 
-        // Retorna null se pode acessar; retorna o IActionResult de erro se não pode.
-        // Admin e Profissional sempre passam (não são eles que "fazem" a lição).
         private async Task<IActionResult?> VerificarAcesso(bool ehVibracao)
         {
             var role = User.FindFirstValue(ClaimTypes.Role);
@@ -38,9 +36,6 @@ namespace Backend.Controllers
             return pode ? null : Forbid();
         }
 
-        // ==========================================
-        // ALTERNATIVA (interpretação de leitura labial)
-        // ==========================================
         [HttpPost("alternativa")]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> PostAlternativa(LicaoAlternativaCriacaoDto dto)
@@ -112,9 +107,6 @@ namespace Backend.Controllers
             return NoContent();
         }
 
-        // ==========================================
-        // FALA
-        // ==========================================
         [HttpPost("fala")]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> PostFala(LicaoFalaCriacaoDto dto)
@@ -176,9 +168,6 @@ namespace Backend.Controllers
             return NoContent();
         }
 
-        // ==========================================
-        // VIDEO (vídeo-aula, sem progressão/nota)
-        // ==========================================
         [HttpPost("video")]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> PostVideo(LicaoVideoCriacaoDto dto)
@@ -240,9 +229,6 @@ namespace Backend.Controllers
             return NoContent();
         }
 
-        // ==========================================
-        // VIBRAÇÃO (acompanhante, sem progressão/nota)
-        // ==========================================
         [HttpPost("vibracao")]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> PostVibracao(LicaoVibracaoCriacaoDto dto)

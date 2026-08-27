@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Backend.Data;
@@ -18,10 +18,6 @@ namespace Backend.Controllers
             _context = context;
         }
 
-        // ==========================================
-        // 1. LISTAR TODAS AS PALAVRAS (GET: api/Dicionario)
-        // Opcionalmente filtra por categoria: GET /api/Dicionario?categoriaId=2
-        // ==========================================
         [HttpGet]
         [Authorize]
         public async Task<IActionResult> GetPalavras([FromQuery] int? categoriaId)
@@ -45,9 +41,6 @@ namespace Backend.Controllers
             return Ok(palavras);
         }
 
-        // ==========================================
-        // 2. BUSCAR PALAVRA POR ID (GET: api/Dicionario/5)
-        // ==========================================
         [HttpGet("{id}")]
         [Authorize]
         public async Task<IActionResult> GetPalavraPorId(int id)
@@ -69,9 +62,6 @@ namespace Backend.Controllers
             });
         }
 
-        // ==========================================
-        // 3. CRIAR PALAVRA (POST: api/Dicionario) — somente Admin
-        // ==========================================
         [HttpPost]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> PostPalavra(PalavraCriacaoDto dto)
@@ -93,9 +83,6 @@ namespace Backend.Controllers
             return CreatedAtAction(nameof(GetPalavraPorId), new { id = novaPalavra.IdPalavra }, novaPalavra);
         }
 
-        // ==========================================
-        // 4. EDITAR PALAVRA (PUT: api/Dicionario/5) — somente Admin
-        // ==========================================
         [HttpPut("{id}")]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> PutPalavra(int id, PalavraCriacaoDto dto)
@@ -116,9 +103,6 @@ namespace Backend.Controllers
             return NoContent();
         }
 
-        // ==========================================
-        // 5. EXCLUIR PALAVRA (DELETE: api/Dicionario/5) — somente Admin
-        // ==========================================
         [HttpDelete("{id}")]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> DeletePalavra(int id)

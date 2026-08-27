@@ -10,7 +10,7 @@ namespace Backend.Models
         public string Nome { get; set; } = string.Empty;
         public string Email { get; set; } = string.Empty;
         public string SenhaHash { get; set; } = string.Empty;
-        public string? Registro { get; set; } // CRM, CRP, etc — opcional
+        public string? Registro { get; set; }
         public string CodigoAcesso { get; set; } = string.Empty;
 
         public List<Usuario> Pacientes { get; set; } = new();

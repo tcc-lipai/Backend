@@ -8,7 +8,7 @@ namespace Backend.Models
         public int IdLicaoFala { get; set; }
 
         public string FraseEsperada { get; set; } = string.Empty;
-        public NivelDificuldade NivelDificuldade { get; set; } // 1 palavra / 2 palavras / frase
+        public NivelDificuldade NivelDificuldade { get; set; }
         public decimal ValorGanho { get; set; }
 
         public int UnidadeId { get; set; }

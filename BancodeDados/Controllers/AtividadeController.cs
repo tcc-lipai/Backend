@@ -1,4 +1,4 @@
-﻿using Backend.Data; 
+using Backend.Data;
 using Backend.Dtos;
 using Backend.Models;
 using Microsoft.AspNetCore.Authorization;
@@ -20,18 +20,15 @@ namespace Backend.Controllers
             _context = context;
         }
 
-        // GET: api/Atividades
         [HttpGet]
         [Authorize]
         public async Task<ActionResult<IEnumerable<Atividade>>> GetAtividades()
         {
-            // Inclui as Unidades caso queira retornar a árvore completa
             return await _context.Atividades
                 .Include(a => a.Unidades)
                 .ToListAsync();
         }
 
-        // GET: api/Atividades/5
         [HttpGet("{id}")]
         [Authorize]
         public async Task<ActionResult<Atividade>> GetAtividade(int id)
@@ -48,7 +45,6 @@ namespace Backend.Controllers
             return atividade;
         }
 
-        // POST: api/Atividades
         [HttpPost]
         [Authorize(Roles = "Admin")]
         public async Task<ActionResult<Atividade>> PostAtividade(AtividadeCriacaoDto dto)
@@ -66,12 +62,10 @@ namespace Backend.Controllers
         }
 
 
-        // PUT: api/Atividades/5
         [HttpPut("{id}")]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> PutAtividade(int id, AtividadeCriacaoDto dto)
         {
-            // 1. Busca a atividade direto do banco de dados
             var atividadeBanco = await _context.Atividades.FindAsync(id);
 
             if (atividadeBanco == null)
@@ -79,13 +73,11 @@ namespace Backend.Controllers
                 return NotFound(new { message = "Atividade não encontrada." });
             }
 
-            // 2. Atualiza apenas os campos permitidos (no caso, o Nome)
             atividadeBanco.Nome = dto.Nome;
             atividadeBanco.Descricao = dto.Descricao;
 
             try
             {
-                // 3. Salva as alterações
                 await _context.SaveChangesAsync();
             }
             catch (DbUpdateConcurrencyException)
@@ -100,10 +92,9 @@ namespace Backend.Controllers
                 }
             }
 
-            return NoContent(); // Retorna 204 que deu tudo certo
+            return NoContent();
         }
 
-        // DELETE: api/Atividades/5
         [HttpDelete("{id}")]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> DeleteAtividade(int id)
@@ -151,9 +142,6 @@ namespace Backend.Controllers
             return Ok(new { message = "Atividade salva com sucesso." });
         }
 
-        // ==========================================
-        // DESSALVAR (DELETE: api/Atividades/salvar/5) — Usuario
-        // ==========================================
         [HttpDelete("salvar/{atividadeId}")]
         [Authorize(Roles = "Usuario")]
         public async Task<IActionResult> DessalvarAtividade(int atividadeId)
@@ -170,9 +158,6 @@ namespace Backend.Controllers
             return NoContent();
         }
 
-        // ==========================================
-        // LISTAR ATIVIDADES SALVAS (GET: api/Atividades/salvas) — Usuario
-        // ==========================================
         [HttpGet("salvas")]
         [Authorize(Roles = "Usuario")]
         public async Task<IActionResult> GetAtividadesSalvas()
