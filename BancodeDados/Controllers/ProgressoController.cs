@@ -292,7 +292,12 @@ namespace Backend.Controllers
             string textoEsperado, IFormFile arquivo, string? estadoAdaptativo)
         {
             using var conteudoAudio = new StreamContent(arquivo.OpenReadStream());
-            conteudoAudio.Headers.ContentType = new MediaTypeHeaderValue(arquivo.ContentType ?? "audio/wav");
+            // O navegador manda algo como "audio/webm;codecs=opus" — Parse aceita os
+            // parâmetros; o construtor de MediaTypeHeaderValue não.
+            conteudoAudio.Headers.ContentType =
+                MediaTypeHeaderValue.TryParse(arquivo.ContentType, out var tipoConteudo)
+                    ? tipoConteudo
+                    : new MediaTypeHeaderValue("audio/wav");
 
             using var form = new MultipartFormDataContent
             {
