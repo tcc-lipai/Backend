@@ -98,6 +98,11 @@ if (app.Environment.IsDevelopment())
         options.SwaggerEndpoint("/swagger/v1/swagger.json", "v1");
         options.RoutePrefix = string.Empty;
     });
+
+    // Dados de exemplo para desenvolvimento (idempotente).
+    using var scope = app.Services.CreateScope();
+    var db = scope.ServiceProvider.GetRequiredService<Backend.Data.AppDbContext>();
+    await Backend.Data.SeedData.PopularAsync(db);
 }
 
 app.UseHttpsRedirection();
