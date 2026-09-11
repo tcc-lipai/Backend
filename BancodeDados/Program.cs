@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
@@ -30,9 +30,10 @@ builder.Services.AddControllers()
 
 builder.Services.AddSingleton<JwtService>();
 builder.Services.AddHttpClient();
+builder.Services.AddScoped<Backend.Services.ConquistaService>();
 
-// Cliente para o serviço de IA (app_llm, porta 8001). Timeout maior porque a
-// análise acústica do MMS roda em CPU e pode levar alguns segundos.
+// Cliente para o serviÃ§o de IA (app_llm, porta 8001). Timeout maior porque a
+// anÃ¡lise acÃºstica do MMS roda em CPU e pode levar alguns segundos.
 builder.Services.AddHttpClient("IA", (sp, client) =>
 {
     var config = sp.GetRequiredService<IConfiguration>();
@@ -112,3 +113,4 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
+

@@ -1,4 +1,4 @@
-using Backend.Data;
+﻿using Backend.Data;
 using Backend.Dtos;
 using Backend.Models;
 using Backend.Services;
@@ -19,13 +19,15 @@ namespace Backend.Controllers
     {
         private readonly AppDbContext _context;
         private readonly IHttpClientFactory _httpClientFactory;
+        private readonly Backend.Services.ConquistaService _conquistaService;
 
         private const double LimiarAcertoFala = 70.0;
 
-        public ProgressoController(AppDbContext context, IHttpClientFactory httpClientFactory)
+        public ProgressoController(AppDbContext context, IHttpClientFactory httpClientFactory, Backend.Services.ConquistaService conquistaService)
         {
             _context = context;
             _httpClientFactory = httpClientFactory;
+            _conquistaService = conquistaService;
         }
 
         private int UsuarioLogadoId => int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
@@ -41,7 +43,7 @@ namespace Backend.Controllers
                 return Forbid();
 
             var licao = await _context.LicoesAlternativa.FindAsync(licaoId);
-            if (licao == null) return NotFound(new { message = "Lição não encontrada." });
+            if (licao == null) return NotFound(new { message = "LiÃ§Ã£o nÃ£o encontrada." });
 
             var progressoExistente = await _context.ProgressosAlternativa
                 .FirstOrDefaultAsync(p => p.UsuarioId == UsuarioLogadoId
@@ -62,6 +64,9 @@ namespace Backend.Controllers
             _context.ProgressosAlternativa.Add(progresso);
             await _context.SaveChangesAsync();
 
+            // Verifica conquistas desbloqueadas após conclusão
+            var novasConquistas = await _conquistaService.VerificarEConcederAsync(UsuarioLogadoId);
+
             return Ok(new { progresso.IdProgresso });
         }
 
@@ -73,10 +78,10 @@ namespace Backend.Controllers
                 .Include(p => p.LicaoAlternativa)
                 .FirstOrDefaultAsync(p => p.IdProgresso == idProgresso);
 
-            if (progresso == null) return NotFound(new { message = "Progresso não encontrado." });
+            if (progresso == null) return NotFound(new { message = "Progresso nÃ£o encontrado." });
             if (progresso.UsuarioId != UsuarioLogadoId) return Forbid();
             if (progresso.Status == StatusProgresso.Concluido)
-                return BadRequest(new { message = "Essa tentativa já foi concluída." });
+                return BadRequest(new { message = "Essa tentativa jÃ¡ foi concluÃ­da." });
 
             var usuario = await _context.Usuarios.FindAsync(UsuarioLogadoId);
 
@@ -99,7 +104,7 @@ namespace Backend.Controllers
                 _context.Notificacoes.Add(new Notificacao
                 {
                     UsuarioId = UsuarioLogadoId,
-                    Descricao = $"Lição concluída! 🎉 Você acertou e ganhou {valorFinal} moedas."
+                    Descricao = $"LiÃ§Ã£o concluÃ­da! ðŸŽ‰ VocÃª acertou e ganhou {valorFinal} moedas."
                 });
             }
             else
@@ -108,6 +113,9 @@ namespace Backend.Controllers
             }
 
             await _context.SaveChangesAsync();
+
+            // Verifica conquistas desbloqueadas após conclusão
+            var novasConquistas = await _conquistaService.VerificarEConcederAsync(UsuarioLogadoId);
 
             return Ok(new
             {
@@ -129,7 +137,7 @@ namespace Backend.Controllers
                 return Forbid();
 
             var licao = await _context.LicoesFala.FindAsync(licaoId);
-            if (licao == null) return NotFound(new { message = "Lição não encontrada." });
+            if (licao == null) return NotFound(new { message = "LiÃ§Ã£o nÃ£o encontrada." });
 
             var progressoExistente = await _context.ProgressosFala
                 .FirstOrDefaultAsync(p => p.UsuarioId == UsuarioLogadoId
@@ -162,13 +170,13 @@ namespace Backend.Controllers
                 .Include(p => p.LicaoFala)
                 .FirstOrDefaultAsync(p => p.IdProgresso == idProgresso);
 
-            if (progresso == null) return NotFound(new { message = "Progresso não encontrado." });
+            if (progresso == null) return NotFound(new { message = "Progresso nÃ£o encontrado." });
             if (progresso.UsuarioId != UsuarioLogadoId) return Forbid();
             if (progresso.Status == StatusProgresso.Concluido)
-                return BadRequest(new { message = "Essa tentativa já foi concluída." });
+                return BadRequest(new { message = "Essa tentativa jÃ¡ foi concluÃ­da." });
 
             if (arquivo == null || arquivo.Length == 0)
-                return BadRequest(new { message = "Nenhum arquivo de áudio enviado." });
+                return BadRequest(new { message = "Nenhum arquivo de Ã¡udio enviado." });
 
             var usuario = await _context.Usuarios.FindAsync(UsuarioLogadoId);
 
@@ -180,7 +188,7 @@ namespace Backend.Controllers
             }
             catch (HttpRequestException)
             {
-                return StatusCode(502, new { message = "Não foi possível avaliar o áudio — o serviço de IA está indisponível." });
+                return StatusCode(502, new { message = "NÃ£o foi possÃ­vel avaliar o Ã¡udio â€” o serviÃ§o de IA estÃ¡ indisponÃ­vel." });
             }
 
             bool correta = avaliacao.ScoreGeral >= LimiarAcertoFala;
@@ -207,7 +215,7 @@ namespace Backend.Controllers
                 _context.Notificacoes.Add(new Notificacao
                 {
                     UsuarioId = UsuarioLogadoId,
-                    Descricao = $"Lição concluída! 🗣️ Você acertou a fala e ganhou {valorFinal} moedas."
+                    Descricao = $"LiÃ§Ã£o concluÃ­da! ðŸ—£ï¸ VocÃª acertou a fala e ganhou {valorFinal} moedas."
                 });
             }
             else
@@ -232,9 +240,9 @@ namespace Backend.Controllers
         }
 
         /// <summary>
-        /// Próximo exercício de fala do aluno, gerado pelo motor adaptativo da IA
-        /// (fonema/nível/repetição espaçada). O estado adaptativo devolvido é
-        /// persistido no usuário.
+        /// PrÃ³ximo exercÃ­cio de fala do aluno, gerado pelo motor adaptativo da IA
+        /// (fonema/nÃ­vel/repetiÃ§Ã£o espaÃ§ada). O estado adaptativo devolvido Ã©
+        /// persistido no usuÃ¡rio.
         /// </summary>
         [HttpGet("fala/proximo-exercicio")]
         [Authorize(Roles = "Usuario")]
@@ -257,17 +265,17 @@ namespace Backend.Controllers
             }
             catch (HttpRequestException)
             {
-                return StatusCode(502, new { message = "O serviço de IA está indisponível." });
+                return StatusCode(502, new { message = "O serviÃ§o de IA estÃ¡ indisponÃ­vel." });
             }
 
             if (resposta.StatusCode == System.Net.HttpStatusCode.NotFound)
-                return NotFound(new { message = "Ainda não há conteúdo de fala para o seu nível/fonema atual." });
+                return NotFound(new { message = "Ainda nÃ£o hÃ¡ conteÃºdo de fala para o seu nÃ­vel/fonema atual." });
             if (!resposta.IsSuccessStatusCode)
-                return StatusCode(502, new { message = "O serviço de IA retornou um erro." });
+                return StatusCode(502, new { message = "O serviÃ§o de IA retornou um erro." });
 
             var exercicio = await resposta.Content.ReadFromJsonAsync<ProximoExercicioIaDto>();
             if (exercicio is null)
-                return StatusCode(502, new { message = "Resposta vazia do serviço de IA." });
+                return StatusCode(502, new { message = "Resposta vazia do serviÃ§o de IA." });
 
             if (exercicio.EstadoAdaptativo.ValueKind == JsonValueKind.Object)
             {
@@ -292,8 +300,8 @@ namespace Backend.Controllers
             string textoEsperado, IFormFile arquivo, string? estadoAdaptativo)
         {
             using var conteudoAudio = new StreamContent(arquivo.OpenReadStream());
-            // O navegador manda algo como "audio/webm;codecs=opus" — Parse aceita os
-            // parâmetros; o construtor de MediaTypeHeaderValue não.
+            // O navegador manda algo como "audio/webm;codecs=opus" â€” Parse aceita os
+            // parÃ¢metros; o construtor de MediaTypeHeaderValue nÃ£o.
             conteudoAudio.Headers.ContentType =
                 MediaTypeHeaderValue.TryParse(arquivo.ContentType, out var tipoConteudo)
                     ? tipoConteudo
@@ -311,11 +319,11 @@ namespace Backend.Controllers
             var resposta = await httpClient.PostAsync("/ia/avaliar-fala", form);
 
             if (!resposta.IsSuccessStatusCode)
-                throw new HttpRequestException($"Serviço de IA retornou {(int)resposta.StatusCode}.");
+                throw new HttpRequestException($"ServiÃ§o de IA retornou {(int)resposta.StatusCode}.");
 
             var resultado = await resposta.Content.ReadFromJsonAsync<AvaliacaoFalaIaDto>();
             if (resultado is null || !resultado.Sucesso)
-                throw new HttpRequestException("Resposta inválida do serviço de IA.");
+                throw new HttpRequestException("Resposta invÃ¡lida do serviÃ§o de IA.");
             return resultado;
         }
 
@@ -406,3 +414,4 @@ namespace Backend.Controllers
         }
     }
 }
+

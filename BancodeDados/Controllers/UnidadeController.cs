@@ -1,4 +1,4 @@
-using Backend.Data;
+﻿using Backend.Data;
 using Backend.Dtos;
 using Backend.Models;
 using Microsoft.AspNetCore.Authorization;
@@ -26,8 +26,7 @@ namespace Backend.Controllers
                 .Include(u => u.LicoesFala)
                 .Include(u => u.LicoesVideo)
                 .Include(u => u.LicoesAlternativa)
-                .Include(u => u.LicoesVibracao)
-                .ToListAsync();
+                .Include(u => u.LicoesVibracao).AsSplitQuery().ToListAsync();
         }
 
         [HttpGet("{id}")]
@@ -38,12 +37,11 @@ namespace Backend.Controllers
                 .Include(u => u.LicoesFala)
                 .Include(u => u.LicoesVideo)
                 .Include(u => u.LicoesAlternativa)
-                .Include(u => u.LicoesVibracao)
-                .FirstOrDefaultAsync(u => u.IdUnidade == id);
+                .Include(u => u.LicoesVibracao).AsSplitQuery().FirstOrDefaultAsync(u => u.IdUnidade == id);
 
             if (unidade == null)
             {
-                return NotFound(new { message = "Unidade não encontrada." });
+                return NotFound(new { message = "Unidade nÃ£o encontrada." });
             }
 
             return unidade;
@@ -56,7 +54,7 @@ namespace Backend.Controllers
             var atividadeExiste = await _context.Atividades.AnyAsync(a => a.IdAtividade == dto.AtividadeId);
             if (!atividadeExiste)
             {
-                return BadRequest(new { message = "A Atividade informada não existe." });
+                return BadRequest(new { message = "A Atividade informada nÃ£o existe." });
             }
 
             var novaUnidade = new Unidade
@@ -79,13 +77,13 @@ namespace Backend.Controllers
 
             if (unidadeBanco == null)
             {
-                return NotFound(new { message = "Unidade não encontrada." });
+                return NotFound(new { message = "Unidade nÃ£o encontrada." });
             }
 
             var atividadeExiste = await _context.Atividades.AnyAsync(a => a.IdAtividade == dto.AtividadeId);
             if (!atividadeExiste)
             {
-                return BadRequest(new { message = "A Atividade informada não existe." });
+                return BadRequest(new { message = "A Atividade informada nÃ£o existe." });
             }
 
             unidadeBanco.Nome = dto.Nome;
