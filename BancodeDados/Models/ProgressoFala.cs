@@ -14,6 +14,16 @@ namespace Backend.Models
         public LicaoFala? LicaoFala { get; set; }
 
         public string? TextoReconhecidoPelaIA { get; set; }
+
+        /// <summary>Nota acústica (0-100) devolvida pelo serviço de IA.</summary>
+        public double? ScoreAcustico { get; set; }
+
+        /// <summary>Feedback em linguagem natural gerado pela IA (fonoaudiólogo).</summary>
+        public string? FeedbackIA { get; set; }
+
+        /// <summary>Detalhes por fonema (JSON) devolvidos pela IA.</summary>
+        public string? DetalhesFonemasJson { get; set; }
+
         public bool Correta { get; set; }
         public decimal PontuacaoObtida { get; set; }
         public StatusProgresso Status { get; set; }

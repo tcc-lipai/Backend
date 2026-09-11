@@ -8,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Security.Claims;
+using System.Text.Json;
 
 namespace Backend.Controllers
 {
@@ -18,15 +19,13 @@ namespace Backend.Controllers
     {
         private readonly AppDbContext _context;
         private readonly IHttpClientFactory _httpClientFactory;
-        private readonly IConfiguration _config;
 
         private const double LimiarAcertoFala = 70.0;
 
-        public ProgressoController(AppDbContext context, IHttpClientFactory httpClientFactory, IConfiguration config)
+        public ProgressoController(AppDbContext context, IHttpClientFactory httpClientFactory)
         {
             _context = context;
             _httpClientFactory = httpClientFactory;
-            _config = config;
         }
 
         private int UsuarioLogadoId => int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
@@ -176,7 +175,8 @@ namespace Backend.Controllers
             AvaliacaoFalaIaDto avaliacao;
             try
             {
-                avaliacao = await AvaliarAudioComIa(progresso.LicaoFala!.FraseEsperada, arquivo);
+                avaliacao = await AvaliarAudioComIa(
+                    progresso.LicaoFala!.FraseEsperada, arquivo, usuario!.EstadoAdaptativoIA);
             }
             catch (HttpRequestException)
             {
@@ -186,9 +186,15 @@ namespace Backend.Controllers
             bool correta = avaliacao.ScoreGeral >= LimiarAcertoFala;
 
             progresso.TextoReconhecidoPelaIA = avaliacao.TextoFalado;
+            progresso.ScoreAcustico = avaliacao.ScoreGeral;
+            progresso.FeedbackIA = avaliacao.FeedbackClinico;
+            progresso.DetalhesFonemasJson = JsonSerializer.Serialize(avaliacao.DetalhesFonemas);
             progresso.Correta = correta;
             progresso.Status = StatusProgresso.Concluido;
             progresso.DataConclusao = DateTime.UtcNow;
+
+            if (avaliacao.EstadoAdaptativo.ValueKind == JsonValueKind.Object)
+                usuario!.EstadoAdaptativoIA = avaliacao.EstadoAdaptativo.GetRawText();
 
             AtualizarOfensiva(usuario!);
 
@@ -217,31 +223,95 @@ namespace Backend.Controllers
                 progresso.PontuacaoObtida,
                 ScoreAcustico = avaliacao.ScoreGeral,
                 TextoReconhecido = avaliacao.TextoFalado,
+                Feedback = avaliacao.FeedbackClinico,
+                FeedbackOrigem = avaliacao.FeedbackOrigem,
+                DetalhesFonemas = avaliacao.DetalhesFonemas,
+                DecisaoAdaptativa = avaliacao.DecisaoAdaptativa,
                 NovoSaldo = usuario!.SaldoAtual
             });
         }
 
-        private async Task<AvaliacaoFalaIaDto> AvaliarAudioComIa(string textoEsperado, IFormFile arquivo)
+        /// <summary>
+        /// Próximo exercício de fala do aluno, gerado pelo motor adaptativo da IA
+        /// (fonema/nível/repetição espaçada). O estado adaptativo devolvido é
+        /// persistido no usuário.
+        /// </summary>
+        [HttpGet("fala/proximo-exercicio")]
+        [Authorize(Roles = "Usuario")]
+        public async Task<IActionResult> ProximoExercicioFala([FromQuery] bool prova = false)
         {
-            var baseUrl = _config["Ia:MmsBaseUrl"] ?? "http://127.0.0.1:8000";
+            var usuario = await _context.Usuarios.FindAsync(UsuarioLogadoId);
+            if (usuario == null) return NotFound();
 
+            if (!RegraNivelService.PodeAcessarOutrosTipos(usuario.NivelDificuldade))
+                return Forbid();
+
+            var httpClient = _httpClientFactory.CreateClient("IA");
+            var estado = Uri.EscapeDataString(usuario.EstadoAdaptativoIA ?? "");
+
+            HttpResponseMessage resposta;
+            try
+            {
+                resposta = await httpClient.GetAsync(
+                    $"/ia/proximo-exercicio?estado_adaptativo={estado}&modo_prova={prova.ToString().ToLower()}");
+            }
+            catch (HttpRequestException)
+            {
+                return StatusCode(502, new { message = "O serviço de IA está indisponível." });
+            }
+
+            if (resposta.StatusCode == System.Net.HttpStatusCode.NotFound)
+                return NotFound(new { message = "Ainda não há conteúdo de fala para o seu nível/fonema atual." });
+            if (!resposta.IsSuccessStatusCode)
+                return StatusCode(502, new { message = "O serviço de IA retornou um erro." });
+
+            var exercicio = await resposta.Content.ReadFromJsonAsync<ProximoExercicioIaDto>();
+            if (exercicio is null)
+                return StatusCode(502, new { message = "Resposta vazia do serviço de IA." });
+
+            if (exercicio.EstadoAdaptativo.ValueKind == JsonValueKind.Object)
+            {
+                usuario.EstadoAdaptativoIA = exercicio.EstadoAdaptativo.GetRawText();
+                await _context.SaveChangesAsync();
+            }
+
+            return Ok(new
+            {
+                exercicio.Fonema,
+                exercicio.Nivel,
+                exercicio.PassoLicao,
+                exercicio.TotalPassos,
+                exercicio.ModoProva,
+                exercicio.TextoGerado,
+                exercicio.Instrucao,
+                exercicio.Dica
+            });
+        }
+
+        private async Task<AvaliacaoFalaIaDto> AvaliarAudioComIa(
+            string textoEsperado, IFormFile arquivo, string? estadoAdaptativo)
+        {
             using var conteudoAudio = new StreamContent(arquivo.OpenReadStream());
             conteudoAudio.Headers.ContentType = new MediaTypeHeaderValue(arquivo.ContentType ?? "audio/wav");
 
             using var form = new MultipartFormDataContent
             {
                 { new StringContent(textoEsperado), "texto_esperado" },
+                { new StringContent(estadoAdaptativo ?? ""), "estado_adaptativo" },
+                { new StringContent("false"), "modo_prova" },
                 { conteudoAudio, "arquivo", arquivo.FileName }
             };
 
-            var httpClient = _httpClientFactory.CreateClient();
-            var resposta = await httpClient.PostAsync($"{baseUrl}/avaliar-fala-alinhada/", form);
+            var httpClient = _httpClientFactory.CreateClient("IA");
+            var resposta = await httpClient.PostAsync("/ia/avaliar-fala", form);
 
             if (!resposta.IsSuccessStatusCode)
                 throw new HttpRequestException($"Serviço de IA retornou {(int)resposta.StatusCode}.");
 
             var resultado = await resposta.Content.ReadFromJsonAsync<AvaliacaoFalaIaDto>();
-            return resultado ?? throw new HttpRequestException("Resposta vazia do serviço de IA.");
+            if (resultado is null || !resultado.Sucesso)
+                throw new HttpRequestException("Resposta inválida do serviço de IA.");
+            return resultado;
         }
 
         [HttpGet("desempenho/{usuarioId}")]

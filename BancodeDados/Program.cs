@@ -31,6 +31,15 @@ builder.Services.AddControllers()
 builder.Services.AddSingleton<JwtService>();
 builder.Services.AddHttpClient();
 
+// Cliente para o serviço de IA (app_llm, porta 8001). Timeout maior porque a
+// análise acústica do MMS roda em CPU e pode levar alguns segundos.
+builder.Services.AddHttpClient("IA", (sp, client) =>
+{
+    var config = sp.GetRequiredService<IConfiguration>();
+    client.BaseAddress = new Uri(config["Ia:BaseUrl"] ?? "http://127.0.0.1:8001");
+    client.Timeout = TimeSpan.FromSeconds(config.GetValue<int?>("Ia:TimeoutSegundos") ?? 120);
+});
+
 var jwtSettings = builder.Configuration.GetSection("Jwt");
 builder.Services.AddAuthentication(options =>
 {

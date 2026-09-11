@@ -512,12 +512,21 @@ namespace Backend.Migrations
                     b.Property<DateTime>("DataInicio")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("DetalhesFonemasJson")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("FeedbackIA")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<int>("LicaoFalaId")
                         .HasColumnType("int");
 
                     b.Property<decimal>("PontuacaoObtida")
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
+
+                    b.Property<double?>("ScoreAcustico")
+                        .HasColumnType("float");
 
                     b.Property<int>("Status")
                         .HasColumnType("int");
@@ -576,6 +585,9 @@ namespace Backend.Migrations
                     b.Property<string>("Email")
                         .IsRequired()
                         .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("EstadoAdaptativoIA")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime?>("MultiplicadorMoedasAte")
                         .HasColumnType("datetime2");

@@ -26,6 +26,7 @@ namespace Backend.Controllers
                 .Include(u => u.LicoesFala)
                 .Include(u => u.LicoesVideo)
                 .Include(u => u.LicoesAlternativa)
+                .Include(u => u.LicoesVibracao)
                 .ToListAsync();
         }
 
@@ -37,6 +38,7 @@ namespace Backend.Controllers
                 .Include(u => u.LicoesFala)
                 .Include(u => u.LicoesVideo)
                 .Include(u => u.LicoesAlternativa)
+                .Include(u => u.LicoesVibracao)
                 .FirstOrDefaultAsync(u => u.IdUnidade == id);
 
             if (unidade == null)
