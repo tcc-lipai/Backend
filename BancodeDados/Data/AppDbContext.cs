@@ -23,6 +23,8 @@ namespace Backend.Data
         public DbSet<LicaoVibracao> LicoesVibracao { get; set; }
         public DbSet<ProgressoAlternativa> ProgressosAlternativa { get; set; }
         public DbSet<ProgressoFala> ProgressosFala { get; set; }
+        public DbSet<ProgressoVideo> ProgressosVideo { get; set; }
+        public DbSet<AtividadeFala> AtividadesFala { get; set; }
         public DbSet<ConquistaUsuario> ConquistasUsuario { get; set; }
         public DbSet<MensagemContato> MensagensContato { get; set; }
         public DbSet<AtividadeSalva> AtividadesSalvas { get; set; }
@@ -82,6 +84,24 @@ namespace Backend.Data
                 .WithMany()
                 .HasForeignKey(p => p.LicaoFalaId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<ProgressoVideo>()
+                .HasOne(p => p.LicaoVideo)
+                .WithMany()
+                .HasForeignKey(p => p.LicaoVideoId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<AtividadeFala>()
+                .HasOne(af => af.Unidade)
+                .WithMany(u => u.AtividadesFala)
+                .HasForeignKey(af => af.UnidadeId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<LicaoFala>()
+                .HasOne(l => l.AtividadeFala)
+                .WithMany(af => af.Exercicios)
+                .HasForeignKey(l => l.AtividadeFalaId)
+                .OnDelete(DeleteBehavior.SetNull);
 
             modelBuilder.Entity<Usuario>()
                 .Property(u => u.SaldoAtual)

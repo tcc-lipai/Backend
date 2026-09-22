@@ -26,7 +26,9 @@ namespace Backend.Controllers
                 .Include(u => u.LicoesFala)
                 .Include(u => u.LicoesVideo)
                 .Include(u => u.LicoesAlternativa)
-                .Include(u => u.LicoesVibracao).AsSplitQuery().ToListAsync();
+                .Include(u => u.LicoesVibracao)
+                .Include(u => u.AtividadesFala).ThenInclude(af => af.Exercicios.OrderBy(e => e.Ordem))
+                .AsSplitQuery().ToListAsync();
         }
 
         [HttpGet("{id}")]
@@ -37,7 +39,9 @@ namespace Backend.Controllers
                 .Include(u => u.LicoesFala)
                 .Include(u => u.LicoesVideo)
                 .Include(u => u.LicoesAlternativa)
-                .Include(u => u.LicoesVibracao).AsSplitQuery().FirstOrDefaultAsync(u => u.IdUnidade == id);
+                .Include(u => u.LicoesVibracao)
+                .Include(u => u.AtividadesFala).ThenInclude(af => af.Exercicios.OrderBy(e => e.Ordem))
+                .AsSplitQuery().FirstOrDefaultAsync(u => u.IdUnidade == id);
 
             if (unidade == null)
             {

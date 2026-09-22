@@ -13,5 +13,9 @@ namespace Backend.Models
 
         public int UnidadeId { get; set; }
         public Unidade? Unidade { get; set; }
+
+        public int Ordem { get; set; }
+        public int? AtividadeFalaId { get; set; }
+        public AtividadeFala? AtividadeFala { get; set; }
     }
 }

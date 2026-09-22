@@ -138,7 +138,15 @@ namespace Backend.Controllers
                 DataSalva = DateTime.UtcNow
             });
 
-            await _context.SaveChangesAsync();
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateException)
+            {
+                return BadRequest(new { message = "Essa atividade já está salva." });
+            }
+
             return Ok(new { message = "Atividade salva com sucesso." });
         }
 

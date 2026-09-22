@@ -128,40 +128,66 @@ namespace Backend.Data
 
         private static async Task SeedConteudoAsync(AppDbContext db)
         {
-            if (await db.Atividades.AnyAsync(a => a.Nome == "Leitura Labial")) return;
-
-            var atividade = new Atividade
+            var atividade = await db.Atividades.FirstOrDefaultAsync(a => a.Nome == "Leitura Labial");
+            if (atividade == null)
             {
-                Nome = "Leitura Labial",
-                Descricao = "Treine a leitura labial e a fala com exercícios guiados.",
-            };
-            db.Atividades.Add(atividade);
-            await db.SaveChangesAsync();
+                atividade = new Atividade
+                {
+                    Nome = "Leitura Labial",
+                    Descricao = "Treine a leitura labial e a fala com exercícios guiados.",
+                };
+                db.Atividades.Add(atividade);
+                await db.SaveChangesAsync();
+            }
 
-            var u1 = new Unidade { Nome = "Unidade 1 — Saudações", AtividadeId = atividade.IdAtividade };
-            var u2 = new Unidade { Nome = "Unidade 2 — Dia a dia", AtividadeId = atividade.IdAtividade };
-            db.Unidades.AddRange(u1, u2);
-            await db.SaveChangesAsync();
+            var u1 = await db.Unidades.FirstOrDefaultAsync(u => u.Nome == "Unidade 1 — Saudações");
+            if (u1 == null)
+            {
+                u1 = new Unidade { Nome = "Unidade 1 — Saudações", AtividadeId = atividade.IdAtividade };
+                db.Unidades.Add(u1);
+                await db.SaveChangesAsync();
+            }
 
-            db.LicoesVideo.AddRange(
-                new LicaoVideo
+            var u2 = await db.Unidades.FirstOrDefaultAsync(u => u.Nome == "Unidade 2 — Dia a dia");
+            if (u2 == null)
+            {
+                u2 = new Unidade { Nome = "Unidade 2 — Dia a dia", AtividadeId = atividade.IdAtividade };
+                db.Unidades.Add(u2);
+                await db.SaveChangesAsync();
+            }
+
+            var u3 = await db.Unidades.FirstOrDefaultAsync(u => u.Nome == "Unidade 3 — Fonema A (Nível Básico)");
+            if (u3 == null)
+            {
+                u3 = new Unidade { Nome = "Unidade 3 — Fonema A (Nível Básico)", AtividadeId = atividade.IdAtividade };
+                db.Unidades.Add(u3);
+                await db.SaveChangesAsync();
+            }
+
+            if (!await db.LicoesVideo.AnyAsync(l => l.UnidadeId == u1.IdUnidade))
+            {
+                db.LicoesVideo.Add(new LicaoVideo
                 {
                     UnidadeId = u1.IdUnidade,
                     Titulo = "Como ler os lábios",
                     VideoDescricao = "Introdução aos movimentos da boca na leitura labial.",
                     VideoUrl = "",
-                },
-                new LicaoVideo
+                });
+            }
+            if (!await db.LicoesVideo.AnyAsync(l => l.UnidadeId == u2.IdUnidade))
+            {
+                db.LicoesVideo.Add(new LicaoVideo
                 {
                     UnidadeId = u2.IdUnidade,
                     Titulo = "Sons parecidos",
                     VideoDescricao = "Diferenciando P, B e M ao ler os lábios.",
                     VideoUrl = "",
-                }
-            );
+                });
+            }
 
-            db.LicoesAlternativa.AddRange(
-                new LicaoAlternativa
+            if (!await db.LicoesAlternativa.AnyAsync(l => l.UnidadeId == u1.IdUnidade))
+            {
+                db.LicoesAlternativa.Add(new LicaoAlternativa
                 {
                     UnidadeId = u1.IdUnidade,
                     Pergunta = "Qual palavra a pessoa falou?",
@@ -172,8 +198,11 @@ namespace Backend.Data
                     RespostaCerta = "A",
                     ValorGanho = 10,
                     VideoUrl = "",
-                },
-                new LicaoAlternativa
+                });
+            }
+            if (!await db.LicoesAlternativa.AnyAsync(l => l.UnidadeId == u2.IdUnidade))
+            {
+                db.LicoesAlternativa.Add(new LicaoAlternativa
                 {
                     UnidadeId = u2.IdUnidade,
                     Pergunta = "O que ela disse?",
@@ -184,47 +213,99 @@ namespace Backend.Data
                     RespostaCerta = "A",
                     ValorGanho = 10,
                     VideoUrl = "",
-                }
-            );
+                });
+            }
 
-            db.LicoesFala.AddRange(
-                new LicaoFala
-                {
-                    UnidadeId = u1.IdUnidade,
-                    FraseEsperada = "bom dia",
-                    NivelDificuldade = NivelDificuldade.Basico,
-                    ValorGanho = 10,
-                },
-                new LicaoFala
-                {
-                    UnidadeId = u1.IdUnidade,
-                    FraseEsperada = "boa noite",
-                    NivelDificuldade = NivelDificuldade.Basico,
-                    ValorGanho = 10,
-                },
-                new LicaoFala
-                {
-                    UnidadeId = u2.IdUnidade,
-                    FraseEsperada = "tudo bem",
-                    NivelDificuldade = NivelDificuldade.Intermediario,
-                    ValorGanho = 15,
-                }
-            );
+            var atividadeFalaU1 = await ObterOuCriarAtividadeFalaAsync(db, u1.IdUnidade, "Fala Saudações 1", NivelDificuldade.Basico);
+            await SeedExerciciosFalaAsync(db, atividadeFalaU1, new (string, NivelDificuldade, decimal)[]
+            {
+                ("bom dia", NivelDificuldade.Basico, 10),
+                ("boa tarde", NivelDificuldade.Basico, 10),
+                ("boa noite", NivelDificuldade.Basico, 10),
+                ("olá, tudo bem?", NivelDificuldade.Basico, 10),
+                ("até logo", NivelDificuldade.Basico, 10),
+            });
 
-            db.LicoesVibracao.AddRange(
-                new LicaoVibracao
+            var atividadeFalaU2 = await ObterOuCriarAtividadeFalaAsync(db, u2.IdUnidade, "Fala Dia a Dia 1", NivelDificuldade.Intermediario);
+            await SeedExerciciosFalaAsync(db, atividadeFalaU2, new (string, NivelDificuldade, decimal)[]
+            {
+                ("tudo bem", NivelDificuldade.Intermediario, 15),
+                ("por favor", NivelDificuldade.Intermediario, 15),
+                ("obrigado", NivelDificuldade.Intermediario, 15),
+                ("com licença", NivelDificuldade.Intermediario, 15),
+            });
+
+            var atividadeFalaU3 = await ObterOuCriarAtividadeFalaAsync(db, u3.IdUnidade, "Fala A 1", NivelDificuldade.Basico);
+            await SeedExerciciosFalaAsync(db, atividadeFalaU3, new (string, NivelDificuldade, decimal)[]
+            {
+                ("aba", NivelDificuldade.Basico, 10),
+                ("acho", NivelDificuldade.Basico, 10),
+                ("aço", NivelDificuldade.Basico, 10),
+                ("agir", NivelDificuldade.Basico, 10),
+                ("ágil", NivelDificuldade.Basico, 10),
+            });
+
+            if (!await db.LicoesVibracao.AnyAsync(l => l.UnidadeId == u1.IdUnidade))
+            {
+                db.LicoesVibracao.AddRange(
+                    new LicaoVibracao
+                    {
+                        UnidadeId = u1.IdUnidade,
+                        Silaba = "PA",
+                        Instrucao = "Sinta a vibração ao juntar os lábios e soltar o ar.",
+                    },
+                    new LicaoVibracao
+                    {
+                        UnidadeId = u1.IdUnidade,
+                        Silaba = "MA",
+                        Instrucao = "Sinta a vibração no nariz ao fechar os lábios.",
+                    }
+                );
+            }
+
+            await db.SaveChangesAsync();
+        }
+
+        private static async Task<AtividadeFala> ObterOuCriarAtividadeFalaAsync(
+            AppDbContext db, int unidadeId, string nome, NivelDificuldade nivel)
+        {
+            var atividadeFala = await db.AtividadesFala.FirstOrDefaultAsync(a => a.Nome == nome);
+            if (atividadeFala == null)
+            {
+                atividadeFala = new AtividadeFala { Nome = nome, NivelDificuldade = nivel, UnidadeId = unidadeId };
+                db.AtividadesFala.Add(atividadeFala);
+                await db.SaveChangesAsync();
+            }
+            return atividadeFala;
+        }
+
+        private static async Task SeedExerciciosFalaAsync(
+            AppDbContext db, AtividadeFala atividadeFala, (string Frase, NivelDificuldade Nivel, decimal Valor)[] frases)
+        {
+            for (int i = 0; i < frases.Length; i++)
+            {
+                var (frase, nivel, valor) = frases[i];
+                var existente = await db.LicoesFala
+                    .FirstOrDefaultAsync(l => l.UnidadeId == atividadeFala.UnidadeId && l.FraseEsperada == frase);
+
+                if (existente == null)
                 {
-                    UnidadeId = u1.IdUnidade,
-                    Silaba = "PA",
-                    Instrucao = "Sinta a vibração ao juntar os lábios e soltar o ar.",
-                },
-                new LicaoVibracao
-                {
-                    UnidadeId = u1.IdUnidade,
-                    Silaba = "MA",
-                    Instrucao = "Sinta a vibração no nariz ao fechar os lábios.",
+                    db.LicoesFala.Add(new LicaoFala
+                    {
+                        UnidadeId = atividadeFala.UnidadeId,
+                        FraseEsperada = frase,
+                        NivelDificuldade = nivel,
+                        ValorGanho = valor,
+                        AtividadeFalaId = atividadeFala.IdAtividadeFala,
+                        Ordem = i,
+                    });
                 }
-            );
+                else if (existente.AtividadeFalaId == null)
+                {
+                    existente.AtividadeFalaId = atividadeFala.IdAtividadeFala;
+                    existente.Ordem = i;
+                }
+            }
 
             await db.SaveChangesAsync();
         }

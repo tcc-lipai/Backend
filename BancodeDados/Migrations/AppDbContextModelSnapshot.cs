@@ -42,6 +42,31 @@ namespace Backend.Migrations
                     b.ToTable("Atividades");
                 });
 
+            modelBuilder.Entity("Backend.Models.AtividadeFala", b =>
+                {
+                    b.Property<int>("IdAtividadeFala")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("IdAtividadeFala"));
+
+                    b.Property<int>("NivelDificuldade")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Nome")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("UnidadeId")
+                        .HasColumnType("int");
+
+                    b.HasKey("IdAtividadeFala");
+
+                    b.HasIndex("UnidadeId");
+
+                    b.ToTable("AtividadesFala");
+                });
+
             modelBuilder.Entity("Backend.Models.AtividadeSalva", b =>
                 {
                     b.Property<int>("Id")
@@ -194,11 +219,17 @@ namespace Backend.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("IdLicaoFala"));
 
+                    b.Property<int?>("AtividadeFalaId")
+                        .HasColumnType("int");
+
                     b.Property<string>("FraseEsperada")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("NivelDificuldade")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Ordem")
                         .HasColumnType("int");
 
                     b.Property<int>("UnidadeId")
@@ -209,6 +240,8 @@ namespace Backend.Migrations
                         .HasColumnType("decimal(18,2)");
 
                     b.HasKey("IdLicaoFala");
+
+                    b.HasIndex("AtividadeFalaId");
 
                     b.HasIndex("UnidadeId");
 
@@ -546,6 +579,38 @@ namespace Backend.Migrations
                     b.ToTable("ProgressosFala");
                 });
 
+            modelBuilder.Entity("Backend.Models.ProgressoVideo", b =>
+                {
+                    b.Property<int>("IdProgresso")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("IdProgresso"));
+
+                    b.Property<DateTime?>("DataConclusao")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("DataInicio")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("LicaoVideoId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<int>("UsuarioId")
+                        .HasColumnType("int");
+
+                    b.HasKey("IdProgresso");
+
+                    b.HasIndex("LicaoVideoId");
+
+                    b.HasIndex("UsuarioId");
+
+                    b.ToTable("ProgressosVideo");
+                });
+
             modelBuilder.Entity("Backend.Models.Unidade", b =>
                 {
                     b.Property<int>("IdUnidade")
@@ -629,6 +694,17 @@ namespace Backend.Migrations
                     b.ToTable("Usuarios");
                 });
 
+            modelBuilder.Entity("Backend.Models.AtividadeFala", b =>
+                {
+                    b.HasOne("Backend.Models.Unidade", "Unidade")
+                        .WithMany("AtividadesFala")
+                        .HasForeignKey("UnidadeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Unidade");
+                });
+
             modelBuilder.Entity("Backend.Models.AtividadeSalva", b =>
                 {
                     b.HasOne("Backend.Models.Atividade", "Atividade")
@@ -680,11 +756,18 @@ namespace Backend.Migrations
 
             modelBuilder.Entity("Backend.Models.LicaoFala", b =>
                 {
+                    b.HasOne("Backend.Models.AtividadeFala", "AtividadeFala")
+                        .WithMany("Exercicios")
+                        .HasForeignKey("AtividadeFalaId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("Backend.Models.Unidade", "Unidade")
                         .WithMany("LicoesFala")
                         .HasForeignKey("UnidadeId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("AtividadeFala");
 
                     b.Navigation("Unidade");
                 });
@@ -801,6 +884,25 @@ namespace Backend.Migrations
                     b.Navigation("Usuario");
                 });
 
+            modelBuilder.Entity("Backend.Models.ProgressoVideo", b =>
+                {
+                    b.HasOne("Backend.Models.LicaoVideo", "LicaoVideo")
+                        .WithMany()
+                        .HasForeignKey("LicaoVideoId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Backend.Models.Usuario", "Usuario")
+                        .WithMany()
+                        .HasForeignKey("UsuarioId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("LicaoVideo");
+
+                    b.Navigation("Usuario");
+                });
+
             modelBuilder.Entity("Backend.Models.Unidade", b =>
                 {
                     b.HasOne("Backend.Models.Atividade", "Atividade")
@@ -827,6 +929,11 @@ namespace Backend.Migrations
                     b.Navigation("Unidades");
                 });
 
+            modelBuilder.Entity("Backend.Models.AtividadeFala", b =>
+                {
+                    b.Navigation("Exercicios");
+                });
+
             modelBuilder.Entity("Backend.Models.Categoria", b =>
                 {
                     b.Navigation("Palavras");
@@ -844,6 +951,8 @@ namespace Backend.Migrations
 
             modelBuilder.Entity("Backend.Models.Unidade", b =>
                 {
+                    b.Navigation("AtividadesFala");
+
                     b.Navigation("LicoesAlternativa");
 
                     b.Navigation("LicoesFala");
