@@ -170,7 +170,7 @@ namespace Backend.Controllers
                 u.DiasSeguidos,
                 u.UltimaAtividadeData,
                 OfensivaCongelada = u.OfensivaCongeladaAte > DateTime.UtcNow,
-                MultiplicadorAtivo = u.MultiplicadorMoedasAte > DateTime.UtcNow,
+                MultiplicadorAtivo = (u.MultiplicadorMoedasAtividadesRestantes ?? 0) > 0,
                 Notificacoes = u.Notificacoes.Select(n => new
                 {
                     n.IdNotificacao,
@@ -237,8 +237,8 @@ namespace Backend.Controllers
                 usuario.UltimaAtividadeData,
                 OfensivaCongelada = usuario.OfensivaCongeladaAte > DateTime.UtcNow,
                 OfensivaCongeladaAte = usuario.OfensivaCongeladaAte,
-                MultiplicadorAtivo = usuario.MultiplicadorMoedasAte > DateTime.UtcNow,
-                MultiplicadorMoedasAte = usuario.MultiplicadorMoedasAte,
+                MultiplicadorAtivo = (usuario.MultiplicadorMoedasAtividadesRestantes ?? 0) > 0,
+                MultiplicadorMoedasAtividadesRestantes = usuario.MultiplicadorMoedasAtividadesRestantes,
                 MultiplicadorMoedasValor = usuario.MultiplicadorMoedasValor,
                 Notificacoes = usuario.Notificacoes.Select(n => new
                 {

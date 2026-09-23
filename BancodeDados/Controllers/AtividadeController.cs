@@ -116,25 +116,39 @@ namespace Backend.Controllers
             return _context.Atividades.Any(e => e.IdAtividade == id);
         }
 
-        [HttpPost("salvar")]
+        private static readonly HashSet<string> TiposItemValidos = new() { "video", "alternativa", "fala", "fala-sessao" };
+
+        private async Task<bool> ItemExisteAsync(string tipoItem, int itemId) => tipoItem switch
+        {
+            "video" => await _context.LicoesVideo.AnyAsync(l => l.IdLicaoVideo == itemId),
+            "alternativa" => await _context.LicoesAlternativa.AnyAsync(l => l.IdLicaoAlternativa == itemId),
+            "fala" => await _context.LicoesFala.AnyAsync(l => l.IdLicaoFala == itemId),
+            "fala-sessao" => await _context.AtividadesFala.AnyAsync(a => a.IdAtividadeFala == itemId),
+            _ => false
+        };
+
+        [HttpPost("item/salvar")]
         [Authorize(Roles = "Usuario")]
-        public async Task<IActionResult> SalvarAtividade(AtividadeSalvaDto dto)
+        public async Task<IActionResult> SalvarItem(ItemSalvoDto dto)
         {
             var usuarioId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
 
-            var atividadeExiste = await _context.Atividades.AnyAsync(a => a.IdAtividade == dto.AtividadeId);
-            if (!atividadeExiste)
-                return BadRequest(new { message = "A Atividade informada não existe." });
+            if (!TiposItemValidos.Contains(dto.TipoItem))
+                return BadRequest(new { message = "Tipo de item inválido." });
 
-            var jaSalva = await _context.AtividadesSalvas
-                .AnyAsync(a => a.UsuarioId == usuarioId && a.AtividadeId == dto.AtividadeId);
-            if (jaSalva)
-                return BadRequest(new { message = "Essa atividade já está salva." });
+            if (!await ItemExisteAsync(dto.TipoItem, dto.ItemId))
+                return BadRequest(new { message = "O item informado não existe." });
 
-            _context.AtividadesSalvas.Add(new AtividadeSalva
+            var jaSalvo = await _context.ItensSalvos
+                .AnyAsync(i => i.UsuarioId == usuarioId && i.TipoItem == dto.TipoItem && i.ItemId == dto.ItemId);
+            if (jaSalvo)
+                return BadRequest(new { message = "Esse item já está salvo." });
+
+            _context.ItensSalvos.Add(new ItemSalvo
             {
                 UsuarioId = usuarioId,
-                AtividadeId = dto.AtividadeId,
+                TipoItem = dto.TipoItem,
+                ItemId = dto.ItemId,
                 DataSalva = DateTime.UtcNow
             });
 
@@ -144,47 +158,63 @@ namespace Backend.Controllers
             }
             catch (DbUpdateException)
             {
-                return BadRequest(new { message = "Essa atividade já está salva." });
+                return BadRequest(new { message = "Esse item já está salvo." });
             }
 
-            return Ok(new { message = "Atividade salva com sucesso." });
+            return Ok(new { message = "Item salvo com sucesso." });
         }
 
-        [HttpDelete("salvar/{atividadeId}")]
+        [HttpDelete("item/salvar/{tipoItem}/{itemId}")]
         [Authorize(Roles = "Usuario")]
-        public async Task<IActionResult> DessalvarAtividade(int atividadeId)
+        public async Task<IActionResult> DessalvarItem(string tipoItem, int itemId)
         {
             var usuarioId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
 
-            var salva = await _context.AtividadesSalvas
-                .FirstOrDefaultAsync(a => a.UsuarioId == usuarioId && a.AtividadeId == atividadeId);
+            var salvo = await _context.ItensSalvos
+                .FirstOrDefaultAsync(i => i.UsuarioId == usuarioId && i.TipoItem == tipoItem && i.ItemId == itemId);
 
-            if (salva == null) return NotFound(new { message = "Essa atividade não está salva." });
+            if (salvo == null) return NotFound(new { message = "Esse item não está salvo." });
 
-            _context.AtividadesSalvas.Remove(salva);
+            _context.ItensSalvos.Remove(salvo);
             await _context.SaveChangesAsync();
             return NoContent();
         }
 
-        [HttpGet("salvas")]
+        [HttpGet("item/salvos")]
         [Authorize(Roles = "Usuario")]
-        public async Task<IActionResult> GetAtividadesSalvas()
+        public async Task<IActionResult> GetItensSalvos()
         {
             var usuarioId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
 
-            var salvas = await _context.AtividadesSalvas
-                .Where(a => a.UsuarioId == usuarioId)
-                .Include(a => a.Atividade)
-                .Select(a => new
-                {
-                    a.Atividade!.IdAtividade,
-                    a.Atividade.Nome,
-                    a.Atividade.Descricao,
-                    a.DataSalva
-                })
+            var salvos = await _context.ItensSalvos
+                .Where(i => i.UsuarioId == usuarioId)
+                .OrderByDescending(i => i.DataSalva)
                 .ToListAsync();
 
-            return Ok(salvas);
+            var resultado = new List<object>();
+            foreach (var item in salvos)
+            {
+                string? titulo = item.TipoItem switch
+                {
+                    "video" => (await _context.LicoesVideo.FindAsync(item.ItemId))?.Titulo,
+                    "alternativa" => (await _context.LicoesAlternativa.FindAsync(item.ItemId))?.Pergunta,
+                    "fala" => (await _context.LicoesFala.FindAsync(item.ItemId))?.FraseEsperada,
+                    "fala-sessao" => (await _context.AtividadesFala.FindAsync(item.ItemId))?.Nome,
+                    _ => null
+                };
+
+                if (titulo == null) continue;
+
+                resultado.Add(new
+                {
+                    item.TipoItem,
+                    item.ItemId,
+                    Titulo = titulo,
+                    item.DataSalva
+                });
+            }
+
+            return Ok(resultado);
         }
     }
 }

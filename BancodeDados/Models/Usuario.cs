@@ -35,5 +35,6 @@ namespace Backend.Models
         public DateTime? OfensivaCongeladaAte { get; set; }
         public DateTime? MultiplicadorMoedasAte { get; set; }
         public decimal? MultiplicadorMoedasValor { get; set; }
+        public int? MultiplicadorMoedasAtividadesRestantes { get; set; }
     }
 }

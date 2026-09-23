@@ -112,6 +112,8 @@ namespace Backend.Controllers
                 progresso.PontuacaoObtida = 0;
             }
 
+            ConsumirMultiplicador(usuario!);
+
             await _context.SaveChangesAsync();
 
             // Verifica conquistas desbloqueadas após conclusão
@@ -222,6 +224,8 @@ namespace Backend.Controllers
             {
                 progresso.PontuacaoObtida = 0;
             }
+
+            ConsumirMultiplicador(usuario!);
 
             await _context.SaveChangesAsync();
 
@@ -442,14 +446,27 @@ namespace Backend.Controllers
 
         private decimal AplicarMultiplicador(Usuario usuario, decimal valorBase)
         {
-            if (usuario.MultiplicadorMoedasAte.HasValue
-                && usuario.MultiplicadorMoedasAte.Value >= DateTime.UtcNow
+            if (usuario.MultiplicadorMoedasAtividadesRestantes.HasValue
+                && usuario.MultiplicadorMoedasAtividadesRestantes.Value > 0
                 && usuario.MultiplicadorMoedasValor.HasValue)
             {
                 return valorBase * usuario.MultiplicadorMoedasValor.Value;
             }
 
             return valorBase;
+        }
+
+        /// <summary>
+        /// Consome uma atividade da janela do multiplicador de moedas (se ativo),
+        /// independente do usuário ter acertado ou não a atividade.
+        /// </summary>
+        private void ConsumirMultiplicador(Usuario usuario)
+        {
+            if (usuario.MultiplicadorMoedasAtividadesRestantes.HasValue
+                && usuario.MultiplicadorMoedasAtividadesRestantes.Value > 0)
+            {
+                usuario.MultiplicadorMoedasAtividadesRestantes--;
+            }
         }
     }
 }

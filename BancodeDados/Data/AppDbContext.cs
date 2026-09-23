@@ -27,7 +27,7 @@ namespace Backend.Data
         public DbSet<AtividadeFala> AtividadesFala { get; set; }
         public DbSet<ConquistaUsuario> ConquistasUsuario { get; set; }
         public DbSet<MensagemContato> MensagensContato { get; set; }
-        public DbSet<AtividadeSalva> AtividadesSalvas { get; set; }
+        public DbSet<ItemSalvo> ItensSalvos { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -127,8 +127,8 @@ namespace Backend.Data
                 .Property(p => p.PontuacaoObtida)
                 .HasPrecision(18, 2);
 
-            modelBuilder.Entity<AtividadeSalva>()
-                .HasIndex(a => new { a.UsuarioId, a.AtividadeId })
+            modelBuilder.Entity<ItemSalvo>()
+                .HasIndex(i => new { i.UsuarioId, i.TipoItem, i.ItemId })
                 .IsUnique();
 
             base.OnModelCreating(modelBuilder);

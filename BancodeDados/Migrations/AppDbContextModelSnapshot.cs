@@ -67,33 +67,6 @@ namespace Backend.Migrations
                     b.ToTable("AtividadesFala");
                 });
 
-            modelBuilder.Entity("Backend.Models.AtividadeSalva", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<int>("AtividadeId")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("DataSalva")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("UsuarioId")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("AtividadeId");
-
-                    b.HasIndex("UsuarioId", "AtividadeId")
-                        .IsUnique();
-
-                    b.ToTable("AtividadesSalvas");
-                });
-
             modelBuilder.Entity("Backend.Models.Categoria", b =>
                 {
                     b.Property<int>("IdCategoria")
@@ -159,6 +132,35 @@ namespace Backend.Migrations
                         .IsUnique();
 
                     b.ToTable("ConquistasUsuario");
+                });
+
+            modelBuilder.Entity("Backend.Models.ItemSalvo", b =>
+                {
+                    b.Property<int>("IdItemSalvo")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("IdItemSalvo"));
+
+                    b.Property<DateTime>("DataSalva")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("ItemId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("TipoItem")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<int>("UsuarioId")
+                        .HasColumnType("int");
+
+                    b.HasKey("IdItemSalvo");
+
+                    b.HasIndex("UsuarioId", "TipoItem", "ItemId")
+                        .IsUnique();
+
+                    b.ToTable("ItensSalvos");
                 });
 
             modelBuilder.Entity("Backend.Models.LicaoAlternativa", b =>
@@ -657,6 +659,9 @@ namespace Backend.Migrations
                     b.Property<DateTime?>("MultiplicadorMoedasAte")
                         .HasColumnType("datetime2");
 
+                    b.Property<int?>("MultiplicadorMoedasAtividadesRestantes")
+                        .HasColumnType("int");
+
                     b.Property<decimal?>("MultiplicadorMoedasValor")
                         .HasColumnType("decimal(18,2)");
 
@@ -705,25 +710,6 @@ namespace Backend.Migrations
                     b.Navigation("Unidade");
                 });
 
-            modelBuilder.Entity("Backend.Models.AtividadeSalva", b =>
-                {
-                    b.HasOne("Backend.Models.Atividade", "Atividade")
-                        .WithMany()
-                        .HasForeignKey("AtividadeId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("Backend.Models.Usuario", "Usuario")
-                        .WithMany()
-                        .HasForeignKey("UsuarioId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Atividade");
-
-                    b.Navigation("Usuario");
-                });
-
             modelBuilder.Entity("Backend.Models.ConquistaUsuario", b =>
                 {
                     b.HasOne("Backend.Models.Conquista", "Conquista")
@@ -739,6 +725,17 @@ namespace Backend.Migrations
                         .IsRequired();
 
                     b.Navigation("Conquista");
+
+                    b.Navigation("Usuario");
+                });
+
+            modelBuilder.Entity("Backend.Models.ItemSalvo", b =>
+                {
+                    b.HasOne("Backend.Models.Usuario", "Usuario")
+                        .WithMany()
+                        .HasForeignKey("UsuarioId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.Navigation("Usuario");
                 });

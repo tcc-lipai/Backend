@@ -70,13 +70,12 @@ namespace Backend.Controllers
 
                 usuario.OfensivaCongeladaAte = baseAtual.AddDays(produto.DuracaoDias.Value * dto.Quantidade);
             }
-            else if (produto.Tipo == TipoProduto.MultiplicadorMoedas && produto.DuracaoDias.HasValue)
+            else if (produto.Tipo == TipoProduto.MultiplicadorMoedas)
             {
-                var baseAtual = usuario.MultiplicadorMoedasAte > DateTime.UtcNow
-                    ? usuario.MultiplicadorMoedasAte.Value
-                    : DateTime.UtcNow;
+                const int atividadesPorCompra = 5;
+                var restantesAtuais = usuario.MultiplicadorMoedasAtividadesRestantes ?? 0;
 
-                usuario.MultiplicadorMoedasAte = baseAtual.AddDays(produto.DuracaoDias.Value * dto.Quantidade);
+                usuario.MultiplicadorMoedasAtividadesRestantes = restantesAtuais + atividadesPorCompra * dto.Quantidade;
                 usuario.MultiplicadorMoedasValor = produto.ValorMultiplicador;
             }
 
@@ -104,7 +103,7 @@ namespace Backend.Controllers
                 novoSaldo = usuario.SaldoAtual,
                 totalGasto = total,
                 ofensivaCongeladaAte = usuario.OfensivaCongeladaAte,
-                multiplicadorAte = usuario.MultiplicadorMoedasAte
+                multiplicadorAtividadesRestantes = usuario.MultiplicadorMoedasAtividadesRestantes
             });
         }
 
