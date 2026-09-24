@@ -97,7 +97,18 @@ namespace Backend.Controllers
 
             if (correta)
             {
-                var valorFinal = AplicarMultiplicador(usuario!, progresso.LicaoAlternativa.ValorGanho);
+                bool jaConcluiuAntes = await _context.ProgressosAlternativa.AnyAsync(p =>
+                    p.UsuarioId == UsuarioLogadoId
+                    && p.LicaoAlternativaId == progresso.LicaoAlternativaId
+                    && p.Status == StatusProgresso.Concluido
+                    && p.Correta
+                    && p.IdProgresso != progresso.IdProgresso);
+
+                var valorBase = jaConcluiuAntes
+                    ? Math.Round(progresso.LicaoAlternativa.ValorGanho / 3m, 2)
+                    : progresso.LicaoAlternativa.ValorGanho;
+
+                var valorFinal = AplicarMultiplicador(usuario!, valorBase);
                 progresso.PontuacaoObtida = valorFinal;
                 usuario!.SaldoAtual += valorFinal;
 
@@ -210,7 +221,18 @@ namespace Backend.Controllers
 
             if (correta)
             {
-                var valorFinal = AplicarMultiplicador(usuario!, progresso.LicaoFala.ValorGanho);
+                bool jaConcluiuAntes = await _context.ProgressosFala.AnyAsync(p =>
+                    p.UsuarioId == UsuarioLogadoId
+                    && p.LicaoFalaId == progresso.LicaoFalaId
+                    && p.Status == StatusProgresso.Concluido
+                    && p.Correta
+                    && p.IdProgresso != progresso.IdProgresso);
+
+                var valorBase = jaConcluiuAntes
+                    ? Math.Round(progresso.LicaoFala.ValorGanho / 3m, 2)
+                    : progresso.LicaoFala.ValorGanho;
+
+                var valorFinal = AplicarMultiplicador(usuario!, valorBase);
                 progresso.PontuacaoObtida = valorFinal;
                 usuario!.SaldoAtual += valorFinal;
 
@@ -413,12 +435,12 @@ namespace Backend.Controllers
 
             var alternativas = await _context.ProgressosAlternativa
                 .Where(p => p.UsuarioId == usuarioId)
-                .Select(p => new { p.IdProgresso, Tipo = "Alternativa", p.LicaoAlternativaId, p.Status, p.PontuacaoObtida, p.DataInicio, p.DataConclusao })
+                .Select(p => new { p.IdProgresso, Tipo = "Alternativa", p.LicaoAlternativaId, p.Status, p.Correta, p.PontuacaoObtida, p.DataInicio, p.DataConclusao })
                 .ToListAsync();
 
             var falas = await _context.ProgressosFala
                 .Where(p => p.UsuarioId == usuarioId)
-                .Select(p => new { p.IdProgresso, Tipo = "Fala", p.LicaoFalaId, p.Status, p.PontuacaoObtida, p.DataInicio, p.DataConclusao })
+                .Select(p => new { p.IdProgresso, Tipo = "Fala", p.LicaoFalaId, p.Status, p.Correta, p.PontuacaoObtida, p.DataInicio, p.DataConclusao })
                 .ToListAsync();
 
             var videos = await _context.ProgressosVideo
