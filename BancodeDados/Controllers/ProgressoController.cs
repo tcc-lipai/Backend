@@ -429,19 +429,74 @@ namespace Backend.Controllers
             return Ok(new { Alternativas = alternativas, Falas = falas, Videos = videos });
         }
 
+        [HttpGet("ofensiva/{usuarioId}")]
+        public async Task<IActionResult> GetHistoricoOfensiva(int usuarioId)
+        {
+            var role = User.FindFirstValue(ClaimTypes.Role);
+            if (role == "Usuario" && UsuarioLogadoId != usuarioId) return Forbid();
+            if (role == "Profissional")
+            {
+                var ehPaciente = await _context.Usuarios
+                    .AnyAsync(u => u.IdUsuario == usuarioId && u.ProfissionalId == UsuarioLogadoId);
+                if (!ehPaciente) return Forbid();
+            }
+
+            var historico = await _context.HistoricosOfensiva
+                .Where(h => h.UsuarioId == usuarioId)
+                .OrderBy(h => h.Data)
+                .Select(h => new { h.Data, h.Status })
+                .ToListAsync();
+
+            return Ok(historico);
+        }
+
+        private static readonly TimeZoneInfo FusoBrasil = TimeZoneInfo.FindSystemTimeZoneById("America/Sao_Paulo");
+
+        /// <summary>
+        /// "Hoje" no fuso do Brasil, não em UTC — perto da virada da meia-noite
+        /// UTC (equivalente a ~21h no horário de Brasília) o dia em UTC já
+        /// avança enquanto ainda é "ontem" para o usuário, o que quebrava a
+        /// contagem de ofensiva e o calendário.
+        /// </summary>
+        private static DateTime HojeNoBrasil() =>
+            TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, FusoBrasil).Date;
+
         private void AtualizarOfensiva(Usuario usuario)
         {
-            var hoje = DateTime.UtcNow.Date;
+            var hoje = HojeNoBrasil();
 
             if (usuario.UltimaAtividadeData?.Date == hoje)
                 return;
 
             var ontem = hoje.AddDays(-1);
-            bool manteveSequencia = usuario.UltimaAtividadeData?.Date == ontem
-                || (usuario.OfensivaCongeladaAte.HasValue && usuario.OfensivaCongeladaAte.Value.Date >= ontem);
+            bool congelouGap = usuario.UltimaAtividadeData.HasValue
+                && usuario.UltimaAtividadeData.Value.Date != ontem
+                && usuario.OfensivaCongeladaAte.HasValue
+                && usuario.OfensivaCongeladaAte.Value.Date >= ontem;
+            bool manteveSequencia = usuario.UltimaAtividadeData?.Date == ontem || congelouGap;
+
+            if (congelouGap)
+            {
+                for (var dia = usuario.UltimaAtividadeData!.Value.Date.AddDays(1); dia <= ontem; dia = dia.AddDays(1))
+                {
+                    _context.HistoricosOfensiva.Add(new HistoricoOfensiva
+                    {
+                        UsuarioId = usuario.IdUsuario,
+                        Data = dia,
+                        Status = "Congelada"
+                    });
+                }
+            }
 
             usuario.DiasSeguidos = manteveSequencia ? usuario.DiasSeguidos + 1 : 1;
             usuario.UltimaAtividadeData = hoje;
+
+            _context.HistoricosOfensiva.Add(new HistoricoOfensiva
+            {
+                UsuarioId = usuario.IdUsuario,
+                Data = hoje,
+                Status = "Realizada"
+            });
         }
 
         private decimal AplicarMultiplicador(Usuario usuario, decimal valorBase)

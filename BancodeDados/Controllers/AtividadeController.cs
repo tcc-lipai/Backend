@@ -116,7 +116,7 @@ namespace Backend.Controllers
             return _context.Atividades.Any(e => e.IdAtividade == id);
         }
 
-        private static readonly HashSet<string> TiposItemValidos = new() { "video", "alternativa", "fala", "fala-sessao" };
+        private static readonly HashSet<string> TiposItemValidos = new() { "video", "alternativa", "fala", "fala-sessao", "unidade" };
 
         private async Task<bool> ItemExisteAsync(string tipoItem, int itemId) => tipoItem switch
         {
@@ -124,6 +124,7 @@ namespace Backend.Controllers
             "alternativa" => await _context.LicoesAlternativa.AnyAsync(l => l.IdLicaoAlternativa == itemId),
             "fala" => await _context.LicoesFala.AnyAsync(l => l.IdLicaoFala == itemId),
             "fala-sessao" => await _context.AtividadesFala.AnyAsync(a => a.IdAtividadeFala == itemId),
+            "unidade" => await _context.Unidades.AnyAsync(u => u.IdUnidade == itemId),
             _ => false
         };
 
@@ -200,6 +201,7 @@ namespace Backend.Controllers
                     "alternativa" => (await _context.LicoesAlternativa.FindAsync(item.ItemId))?.Pergunta,
                     "fala" => (await _context.LicoesFala.FindAsync(item.ItemId))?.FraseEsperada,
                     "fala-sessao" => (await _context.AtividadesFala.FindAsync(item.ItemId))?.Nome,
+                    "unidade" => (await _context.Unidades.FindAsync(item.ItemId))?.Nome,
                     _ => null
                 };
 

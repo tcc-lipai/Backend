@@ -28,6 +28,7 @@ namespace Backend.Data
         public DbSet<ConquistaUsuario> ConquistasUsuario { get; set; }
         public DbSet<MensagemContato> MensagensContato { get; set; }
         public DbSet<ItemSalvo> ItensSalvos { get; set; }
+        public DbSet<HistoricoOfensiva> HistoricosOfensiva { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -129,6 +130,10 @@ namespace Backend.Data
 
             modelBuilder.Entity<ItemSalvo>()
                 .HasIndex(i => new { i.UsuarioId, i.TipoItem, i.ItemId })
+                .IsUnique();
+
+            modelBuilder.Entity<HistoricoOfensiva>()
+                .HasIndex(h => new { h.UsuarioId, h.Data })
                 .IsUnique();
 
             base.OnModelCreating(modelBuilder);

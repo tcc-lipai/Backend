@@ -134,6 +134,32 @@ namespace Backend.Migrations
                     b.ToTable("ConquistasUsuario");
                 });
 
+            modelBuilder.Entity("Backend.Models.HistoricoOfensiva", b =>
+                {
+                    b.Property<int>("IdHistoricoOfensiva")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("IdHistoricoOfensiva"));
+
+                    b.Property<DateTime>("Data")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("UsuarioId")
+                        .HasColumnType("int");
+
+                    b.HasKey("IdHistoricoOfensiva");
+
+                    b.HasIndex("UsuarioId", "Data")
+                        .IsUnique();
+
+                    b.ToTable("HistoricosOfensiva");
+                });
+
             modelBuilder.Entity("Backend.Models.ItemSalvo", b =>
                 {
                     b.Property<int>("IdItemSalvo")
@@ -725,6 +751,17 @@ namespace Backend.Migrations
                         .IsRequired();
 
                     b.Navigation("Conquista");
+
+                    b.Navigation("Usuario");
+                });
+
+            modelBuilder.Entity("Backend.Models.HistoricoOfensiva", b =>
+                {
+                    b.HasOne("Backend.Models.Usuario", "Usuario")
+                        .WithMany()
+                        .HasForeignKey("UsuarioId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.Navigation("Usuario");
                 });
