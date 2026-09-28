@@ -104,19 +104,24 @@ namespace Backend.Controllers
                     && p.Correta
                     && p.IdProgresso != progresso.IdProgresso);
 
-                var valorBase = jaConcluiuAntes
-                    ? Math.Round(progresso.LicaoAlternativa.ValorGanho / 3m, 2)
-                    : progresso.LicaoAlternativa.ValorGanho;
-
-                var valorFinal = AplicarMultiplicador(usuario!, valorBase);
-                progresso.PontuacaoObtida = valorFinal;
-                usuario!.SaldoAtual += valorFinal;
-
-                _context.Notificacoes.Add(new Notificacao
+                if (jaConcluiuAntes)
                 {
-                    UsuarioId = UsuarioLogadoId,
-                    Descricao = $"LiÃ§Ã£o concluÃ­da! ðŸŽ‰ VocÃª acertou e ganhou {valorFinal} moedas."
-                });
+                    // já passou dessa lição antes — refazer não paga de novo,
+                    // só registra a tentativa (evita farmar moeda repetindo).
+                    progresso.PontuacaoObtida = 0;
+                }
+                else
+                {
+                    var valorFinal = AplicarMultiplicador(usuario!, progresso.LicaoAlternativa.ValorGanho);
+                    progresso.PontuacaoObtida = valorFinal;
+                    usuario!.SaldoAtual += valorFinal;
+
+                    _context.Notificacoes.Add(new Notificacao
+                    {
+                        UsuarioId = UsuarioLogadoId,
+                        Descricao = $"LiÃ§Ã£o concluÃ­da! ðŸŽ‰ VocÃª acertou e ganhou {valorFinal} moedas."
+                    });
+                }
             }
             else
             {
@@ -228,19 +233,24 @@ namespace Backend.Controllers
                     && p.Correta
                     && p.IdProgresso != progresso.IdProgresso);
 
-                var valorBase = jaConcluiuAntes
-                    ? Math.Round(progresso.LicaoFala.ValorGanho / 3m, 2)
-                    : progresso.LicaoFala.ValorGanho;
-
-                var valorFinal = AplicarMultiplicador(usuario!, valorBase);
-                progresso.PontuacaoObtida = valorFinal;
-                usuario!.SaldoAtual += valorFinal;
-
-                _context.Notificacoes.Add(new Notificacao
+                if (jaConcluiuAntes)
                 {
-                    UsuarioId = UsuarioLogadoId,
-                    Descricao = $"LiÃ§Ã£o concluÃ­da! ðŸ—£ï¸ VocÃª acertou a fala e ganhou {valorFinal} moedas."
-                });
+                    // já passou dessa lição antes — refazer não paga de novo,
+                    // só registra a tentativa (evita farmar moeda repetindo).
+                    progresso.PontuacaoObtida = 0;
+                }
+                else
+                {
+                    var valorFinal = AplicarMultiplicador(usuario!, progresso.LicaoFala.ValorGanho);
+                    progresso.PontuacaoObtida = valorFinal;
+                    usuario!.SaldoAtual += valorFinal;
+    
+                    _context.Notificacoes.Add(new Notificacao
+                    {
+                        UsuarioId = UsuarioLogadoId,
+                        Descricao = $"LiÃ§Ã£o concluÃ­da! ðŸ—£ï¸ VocÃª acertou a fala e ganhou {valorFinal} moedas."
+                    });
+                }
             }
             else
             {
