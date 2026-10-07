@@ -25,6 +25,8 @@ builder.Services.AddControllers()
     .AddJsonOptions(options =>
     {
         options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
+        // o conversor do nível precisa vir antes do global de enum, senão ele é ignorado
+        options.JsonSerializerOptions.Converters.Add(new Backend.Models.NivelDificuldadeJsonConverter());
         options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
     });
 

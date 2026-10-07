@@ -120,8 +120,11 @@ namespace Backend.Controllers
                 UnidadeId = dto.UnidadeId,
                 FraseEsperada = dto.FraseEsperada,
                 NivelDificuldade = dto.NivelDificuldade,
-                ValorGanho = dto.ValorGanho
+                ValorGanho = dto.ValorGanho,
+                AtividadeFalaId = dto.AtividadeFalaId
             };
+            if (dto.AtividadeFalaId != null)
+                licao.Ordem = await ProximaOrdemFala(dto.AtividadeFalaId.Value);
 
             _context.LicoesFala.Add(licao);
             await _context.SaveChangesAsync();
@@ -148,13 +151,26 @@ namespace Backend.Controllers
             var licao = await _context.LicoesFala.FindAsync(id);
             if (licao == null) return NotFound();
 
+            if (dto.AtividadeFalaId != licao.AtividadeFalaId && dto.AtividadeFalaId != null)
+                licao.Ordem = await ProximaOrdemFala(dto.AtividadeFalaId.Value);
+
             licao.UnidadeId = dto.UnidadeId;
             licao.FraseEsperada = dto.FraseEsperada;
             licao.NivelDificuldade = dto.NivelDificuldade;
             licao.ValorGanho = dto.ValorGanho;
+            licao.AtividadeFalaId = dto.AtividadeFalaId;
 
             await _context.SaveChangesAsync();
             return NoContent();
+        }
+
+        private async Task<int> ProximaOrdemFala(int atividadeFalaId)
+        {
+            var maior = await _context.LicoesFala
+                .Where(l => l.AtividadeFalaId == atividadeFalaId)
+                .Select(l => (int?)l.Ordem)
+                .MaxAsync();
+            return (maior ?? 0) + 1;
         }
 
         [HttpDelete("fala/{id}")]

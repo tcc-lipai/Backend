@@ -16,8 +16,14 @@ namespace Backend.Models
     {
         public override NivelDificuldade Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {
-            int valor = reader.GetInt32();
-            return (NivelDificuldade)valor;
+            if (reader.TokenType == JsonTokenType.String)
+            {
+                var nome = reader.GetString() ?? string.Empty;
+                if (Enum.TryParse<NivelDificuldade>(nome, ignoreCase: true, out var porNome))
+                    return porNome;
+                throw new JsonException($"Nível de dificuldade inválido: '{nome}'.");
+            }
+            return (NivelDificuldade)reader.GetInt32();
         }
 
         public override void Write(Utf8JsonWriter writer, NivelDificuldade value, JsonSerializerOptions options)

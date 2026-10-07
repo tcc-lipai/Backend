@@ -1,4 +1,4 @@
-﻿using Backend.Models;
+using Backend.Models;
 
 namespace Backend.Dtos
 {
@@ -8,5 +8,6 @@ namespace Backend.Dtos
         public string FraseEsperada { get; set; } = string.Empty;
         public NivelDificuldade NivelDificuldade { get; set; }
         public decimal ValorGanho { get; set; }
+        public int? AtividadeFalaId { get; set; }
     }
 }

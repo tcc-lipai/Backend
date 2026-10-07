@@ -94,7 +94,15 @@ namespace Backend.Controllers
                 profissional.Email,
                 profissional.Registro,
                 profissional.CodigoAcesso,
-                QtdePacientes = profissional.Pacientes.Count
+                QtdePacientes = profissional.Pacientes.Count,
+                Pacientes = profissional.Pacientes.Select(u => new
+                {
+                    u.IdUsuario,
+                    u.Nome,
+                    u.Email,
+                    u.NivelDificuldade,
+                    u.Diagnostico
+                })
             });
         }
 
@@ -151,8 +159,10 @@ namespace Backend.Controllers
                 {
                     u.IdUsuario,
                     u.Nome,
+                    u.Email,
                     u.NivelDificuldade,
-                    u.Diagnostico
+                    u.Diagnostico,
+                    u.UltimaAtividadeData
                 })
                 .ToListAsync();
 
