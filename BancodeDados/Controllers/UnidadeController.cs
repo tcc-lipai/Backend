@@ -31,6 +31,37 @@ namespace Backend.Controllers
                 .AsSplitQuery().ToListAsync();
         }
 
+        /// <summary>
+        /// Versão leve de GET /api/Unidades: só nome e contagem de atividades por
+        /// unidade, sem trazer o conteúdo de cada exercício. Pensada para telas que
+        /// só precisam listar/contar unidades (Dashboard, listagens), evitando
+        /// serializar o grafo inteiro (milhares de lições) a cada carregamento.
+        /// </summary>
+        [HttpGet("resumo")]
+        [Authorize]
+        public async Task<ActionResult<IEnumerable<UnidadeResumoDto>>> GetUnidadesResumo()
+        {
+            return await _context.Unidades
+                .Select(u => new UnidadeResumoDto
+                {
+                    IdUnidade = u.IdUnidade,
+                    Nome = u.Nome,
+                    AtividadeId = u.AtividadeId,
+                    TotalAtividades =
+                        u.LicoesFala.Count(l => l.AtividadeFalaId == null)
+                        + u.AtividadesFala.Count
+                        + u.LicoesVideo.Count
+                        + u.LicoesAlternativa.Count
+                        + u.LicoesVibracao.Count,
+                    TotalLicoes =
+                        u.LicoesFala.Count
+                        + u.LicoesVideo.Count
+                        + u.LicoesAlternativa.Count
+                        + u.LicoesVibracao.Count
+                })
+                .ToListAsync();
+        }
+
         [HttpGet("{id}")]
         [Authorize]
         public async Task<ActionResult<Unidade>> GetUnidade(int id)
