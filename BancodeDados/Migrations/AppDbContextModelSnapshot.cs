@@ -607,6 +607,38 @@ namespace Backend.Migrations
                     b.ToTable("ProgressosFala");
                 });
 
+            modelBuilder.Entity("Backend.Models.ProgressoVibracao", b =>
+                {
+                    b.Property<int>("IdProgresso")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("IdProgresso"));
+
+                    b.Property<DateTime?>("DataConclusao")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("DataInicio")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("LicaoVibracaoId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<int>("UsuarioId")
+                        .HasColumnType("int");
+
+                    b.HasKey("IdProgresso");
+
+                    b.HasIndex("LicaoVibracaoId");
+
+                    b.HasIndex("UsuarioId");
+
+                    b.ToTable("ProgressosVibracao");
+                });
+
             modelBuilder.Entity("Backend.Models.ProgressoVideo", b =>
                 {
                     b.Property<int>("IdProgresso")
@@ -914,6 +946,25 @@ namespace Backend.Migrations
                         .IsRequired();
 
                     b.Navigation("LicaoFala");
+
+                    b.Navigation("Usuario");
+                });
+
+            modelBuilder.Entity("Backend.Models.ProgressoVibracao", b =>
+                {
+                    b.HasOne("Backend.Models.LicaoVibracao", "LicaoVibracao")
+                        .WithMany()
+                        .HasForeignKey("LicaoVibracaoId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Backend.Models.Usuario", "Usuario")
+                        .WithMany()
+                        .HasForeignKey("UsuarioId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("LicaoVibracao");
 
                     b.Navigation("Usuario");
                 });

@@ -24,6 +24,7 @@ namespace Backend.Data
         public DbSet<ProgressoAlternativa> ProgressosAlternativa { get; set; }
         public DbSet<ProgressoFala> ProgressosFala { get; set; }
         public DbSet<ProgressoVideo> ProgressosVideo { get; set; }
+        public DbSet<ProgressoVibracao> ProgressosVibracao { get; set; }
         public DbSet<AtividadeFala> AtividadesFala { get; set; }
         public DbSet<ConquistaUsuario> ConquistasUsuario { get; set; }
         public DbSet<MensagemContato> MensagensContato { get; set; }
@@ -90,6 +91,12 @@ namespace Backend.Data
                 .HasOne(p => p.LicaoVideo)
                 .WithMany()
                 .HasForeignKey(p => p.LicaoVideoId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<ProgressoVibracao>()
+                .HasOne(p => p.LicaoVibracao)
+                .WithMany()
+                .HasForeignKey(p => p.LicaoVibracaoId)
                 .OnDelete(DeleteBehavior.Restrict);
 
             modelBuilder.Entity<AtividadeFala>()

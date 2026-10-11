@@ -309,6 +309,43 @@ namespace Backend.Controllers
             return Ok(new { progresso.IdProgresso });
         }
 
+        [HttpPost("vibracao/{licaoId}/concluir")]
+        [Authorize(Roles = "Usuario")]
+        public async Task<IActionResult> ConcluirVibracao(int licaoId)
+        {
+            var usuario = await _context.Usuarios.FindAsync(UsuarioLogadoId);
+            if (usuario == null) return NotFound();
+
+            if (!RegraNivelService.PodeAcessarVibracao(usuario.NivelDificuldade))
+                return Forbid();
+
+            var licao = await _context.LicoesVibracao.FindAsync(licaoId);
+            if (licao == null) return NotFound(new { message = "Lição não encontrada." });
+
+            var progressoExistente = await _context.ProgressosVibracao
+                .FirstOrDefaultAsync(p => p.UsuarioId == UsuarioLogadoId && p.LicaoVibracaoId == licaoId);
+
+            if (progressoExistente != null)
+                return Ok(new { progressoExistente.IdProgresso });
+
+            var progresso = new ProgressoVibracao
+            {
+                UsuarioId = UsuarioLogadoId,
+                LicaoVibracaoId = licaoId,
+                Status = StatusProgresso.Concluido,
+                DataInicio = DateTime.UtcNow,
+                DataConclusao = DateTime.UtcNow
+            };
+
+            _context.ProgressosVibracao.Add(progresso);
+            AtualizarOfensiva(usuario);
+            await _context.SaveChangesAsync();
+
+            var novasConquistasVibracao = await _conquistaService.VerificarEConcederAsync(UsuarioLogadoId);
+
+            return Ok(new { progresso.IdProgresso, novasConquistas = novasConquistasVibracao });
+        }
+
         /// <summary>
         /// PrÃ³ximo exercÃ­cio de fala do aluno, gerado pelo motor adaptativo da IA
         /// (fonema/nÃ­vel/repetiÃ§Ã£o espaÃ§ada). O estado adaptativo devolvido Ã©
@@ -458,7 +495,12 @@ namespace Backend.Controllers
                 .Select(p => new { p.IdProgresso, Tipo = "Video", p.LicaoVideoId, p.Status, p.DataInicio, p.DataConclusao })
                 .ToListAsync();
 
-            return Ok(new { Alternativas = alternativas, Falas = falas, Videos = videos });
+            var vibracoes = await _context.ProgressosVibracao
+                .Where(p => p.UsuarioId == usuarioId)
+                .Select(p => new { p.IdProgresso, Tipo = "Vibracao", p.LicaoVibracaoId, p.Status, p.DataInicio, p.DataConclusao })
+                .ToListAsync();
+
+            return Ok(new { Alternativas = alternativas, Falas = falas, Videos = videos, Vibracoes = vibracoes });
         }
 
         [HttpGet("ofensiva/{usuarioId}")]
