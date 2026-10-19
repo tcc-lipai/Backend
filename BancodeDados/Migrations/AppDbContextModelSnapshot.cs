@@ -213,6 +213,9 @@ namespace Backend.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<int>("NivelDificuldade")
+                        .HasColumnType("int");
+
                     b.Property<string>("Pergunta")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -309,6 +312,9 @@ namespace Backend.Migrations
                         .HasColumnType("int");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("IdLicaoVideo"));
+
+                    b.Property<int>("NivelDificuldade")
+                        .HasColumnType("int");
 
                     b.Property<string>("Titulo")
                         .IsRequired()

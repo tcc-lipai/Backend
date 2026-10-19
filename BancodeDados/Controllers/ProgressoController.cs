@@ -39,11 +39,11 @@ namespace Backend.Controllers
             var usuario = await _context.Usuarios.FindAsync(UsuarioLogadoId);
             if (usuario == null) return NotFound();
 
-            if (!RegraNivelService.PodeAcessarOutrosTipos(usuario.NivelDificuldade))
-                return Forbid();
-
             var licao = await _context.LicoesAlternativa.FindAsync(licaoId);
             if (licao == null) return NotFound(new { message = "LiÃ§Ã£o nÃ£o encontrada." });
+
+            if (!RegraNivelService.PodeAcessarConteudo(usuario.NivelDificuldade, licao.NivelDificuldade))
+                return Forbid();
 
             var progressoExistente = await _context.ProgressosAlternativa
                 .FirstOrDefaultAsync(p => p.UsuarioId == UsuarioLogadoId
@@ -151,11 +151,11 @@ namespace Backend.Controllers
             var usuario = await _context.Usuarios.FindAsync(UsuarioLogadoId);
             if (usuario == null) return NotFound();
 
-            if (!RegraNivelService.PodeAcessarOutrosTipos(usuario.NivelDificuldade))
-                return Forbid();
-
             var licao = await _context.LicoesFala.FindAsync(licaoId);
             if (licao == null) return NotFound(new { message = "LiÃ§Ã£o nÃ£o encontrada." });
+
+            if (!RegraNivelService.PodeAcessarConteudo(usuario.NivelDificuldade, licao.NivelDificuldade))
+                return Forbid();
 
             var progressoExistente = await _context.ProgressosFala
                 .FirstOrDefaultAsync(p => p.UsuarioId == UsuarioLogadoId
@@ -284,6 +284,9 @@ namespace Backend.Controllers
 
             var licao = await _context.LicoesVideo.FindAsync(licaoId);
             if (licao == null) return NotFound(new { message = "LiÃ§Ã£o nÃ£o encontrada." });
+
+            if (!RegraNivelService.PodeAcessarConteudo(usuario.NivelDificuldade, licao.NivelDificuldade))
+                return Forbid();
 
             var progressoExistente = await _context.ProgressosVideo
                 .FirstOrDefaultAsync(p => p.UsuarioId == UsuarioLogadoId && p.LicaoVideoId == licaoId);
@@ -487,7 +490,7 @@ namespace Backend.Controllers
 
             var falas = await _context.ProgressosFala
                 .Where(p => p.UsuarioId == usuarioId)
-                .Select(p => new { p.IdProgresso, Tipo = "Fala", p.LicaoFalaId, p.Status, p.Correta, p.PontuacaoObtida, p.DataInicio, p.DataConclusao })
+                .Select(p => new { p.IdProgresso, Tipo = "Fala", p.LicaoFalaId, p.Status, p.Correta, p.ScoreAcustico, p.PontuacaoObtida, p.DataInicio, p.DataConclusao })
                 .ToListAsync();
 
             var videos = await _context.ProgressosVideo
@@ -501,6 +504,213 @@ namespace Backend.Controllers
                 .ToListAsync();
 
             return Ok(new { Alternativas = alternativas, Falas = falas, Videos = videos, Vibracoes = vibracoes });
+        }
+
+        private const double LimiarMediaNivel = 70.0;
+
+        /// <summary>
+        /// Checa se o usuário logado pode subir de nível: completou 100% do
+        /// conteúdo do nível atual (sem contar níveis anteriores) com média de
+        /// acerto >= 70% entre Fala+Alternativa (Vídeo só precisa estar
+        /// concluído, não tem noção de acerto). Pro Iniciante o gate é só
+        /// completar toda a Vibração (não tem "acerto" nela).
+        /// </summary>
+        private async Task<(bool Elegivel, NivelDificuldade? ProximoNivel)> CalcularElegibilidadeNivel(Usuario usuario)
+        {
+            if (usuario.NivelDificuldade == NivelDificuldade.Avancado)
+                return (false, null);
+
+            var proximoNivel = (NivelDificuldade)((int)usuario.NivelDificuldade + 1);
+
+            if (usuario.NivelDificuldade == NivelDificuldade.Iniciante)
+            {
+                var totalVibracao = await _context.LicoesVibracao.CountAsync();
+                if (totalVibracao == 0) return (false, proximoNivel);
+
+                var concluidasVibracao = await _context.ProgressosVibracao
+                    .CountAsync(p => p.UsuarioId == usuario.IdUsuario && p.Status == StatusProgresso.Concluido);
+
+                return (concluidasVibracao >= totalVibracao, proximoNivel);
+            }
+
+            var nivelAtual = usuario.NivelDificuldade;
+
+            var totalFala = await _context.LicoesFala.CountAsync(l => l.NivelDificuldade == nivelAtual);
+            var totalAlternativa = await _context.LicoesAlternativa.CountAsync(l => l.NivelDificuldade == nivelAtual);
+            var totalVideo = await _context.LicoesVideo.CountAsync(l => l.NivelDificuldade == nivelAtual);
+
+            if (totalFala + totalAlternativa + totalVideo == 0)
+                return (false, proximoNivel);
+
+            var falaPorLicao = await (
+                from p in _context.ProgressosFala
+                join l in _context.LicoesFala on p.LicaoFalaId equals l.IdLicaoFala
+                where p.UsuarioId == usuario.IdUsuario && l.NivelDificuldade == nivelAtual && p.Status == StatusProgresso.Concluido
+                group p by p.LicaoFalaId into g
+                select g.Any(x => x.Correta)
+            ).ToListAsync();
+
+            var alternativaPorLicao = await (
+                from p in _context.ProgressosAlternativa
+                join l in _context.LicoesAlternativa on p.LicaoAlternativaId equals l.IdLicaoAlternativa
+                where p.UsuarioId == usuario.IdUsuario && l.NivelDificuldade == nivelAtual && p.Status == StatusProgresso.Concluido
+                group p by p.LicaoAlternativaId into g
+                select g.Any(x => x.Correta)
+            ).ToListAsync();
+
+            var concluidasVideo = await (
+                from p in _context.ProgressosVideo
+                join l in _context.LicoesVideo on p.LicaoVideoId equals l.IdLicaoVideo
+                where p.UsuarioId == usuario.IdUsuario && l.NivelDificuldade == nivelAtual && p.Status == StatusProgresso.Concluido
+                select p.LicaoVideoId
+            ).Distinct().CountAsync();
+
+            bool completouTudo = falaPorLicao.Count >= totalFala
+                && alternativaPorLicao.Count >= totalAlternativa
+                && concluidasVideo >= totalVideo;
+
+            if (!completouTudo) return (false, proximoNivel);
+
+            var avaliados = falaPorLicao.Count + alternativaPorLicao.Count;
+            if (avaliados == 0) return (true, proximoNivel); // só tinha vídeo nesse nível
+
+            var corretos = falaPorLicao.Count(c => c) + alternativaPorLicao.Count(c => c);
+            double media = (double)corretos / avaliados * 100;
+
+            return (media >= LimiarMediaNivel, proximoNivel);
+        }
+
+        [HttpGet("nivel/elegibilidade")]
+        [Authorize(Roles = "Usuario")]
+        public async Task<IActionResult> GetElegibilidadeNivel()
+        {
+            var usuario = await _context.Usuarios.FindAsync(UsuarioLogadoId);
+            if (usuario == null) return NotFound();
+
+            var (elegivel, proximoNivel) = await CalcularElegibilidadeNivel(usuario);
+
+            return Ok(new
+            {
+                NivelAtual = usuario.NivelDificuldade,
+                ProximoNivel = proximoNivel,
+                Elegivel = elegivel
+            });
+        }
+
+        [HttpPost("nivel/subir")]
+        [Authorize(Roles = "Usuario")]
+        public async Task<IActionResult> SubirNivel()
+        {
+            var usuario = await _context.Usuarios.FindAsync(UsuarioLogadoId);
+            if (usuario == null) return NotFound();
+
+            var (elegivel, proximoNivel) = await CalcularElegibilidadeNivel(usuario);
+            if (!elegivel || proximoNivel == null)
+                return BadRequest(new { message = "Você ainda não completou os requisitos pra subir de nível." });
+
+            usuario.NivelDificuldade = proximoNivel.Value;
+            await _context.SaveChangesAsync();
+
+            return Ok(new { NovoNivel = usuario.NivelDificuldade });
+        }
+
+        [HttpGet("desempenho-unidades/{usuarioId}")]
+        public async Task<IActionResult> GetDesempenhoPorUnidade(int usuarioId)
+        {
+            var role = User.FindFirstValue(ClaimTypes.Role);
+            if (role == "Usuario" && UsuarioLogadoId != usuarioId) return Forbid();
+            if (role == "Profissional")
+            {
+                var ehPaciente = await _context.Usuarios
+                    .AnyAsync(u => u.IdUsuario == usuarioId && u.ProfissionalId == UsuarioLogadoId);
+                if (!ehPaciente) return Forbid();
+            }
+
+            var usuario = await _context.Usuarios.FindAsync(usuarioId);
+            if (usuario == null) return NotFound();
+            var nivelUsuario = usuario.NivelDificuldade;
+
+            var falaPorUnidade = await (
+                from p in _context.ProgressosFala
+                join l in _context.LicoesFala on p.LicaoFalaId equals l.IdLicaoFala
+                where p.UsuarioId == usuarioId && l.NivelDificuldade <= nivelUsuario && p.Status == StatusProgresso.Concluido
+                group p by l.UnidadeId into g
+                select new { UnidadeId = g.Key, Concluidas = g.Select(x => x.LicaoFalaId).Distinct().Count(), Corretas = g.Count(x => x.Correta) }
+            ).ToListAsync();
+
+            var alternativaPorUnidade = await (
+                from p in _context.ProgressosAlternativa
+                join l in _context.LicoesAlternativa on p.LicaoAlternativaId equals l.IdLicaoAlternativa
+                where p.UsuarioId == usuarioId && l.NivelDificuldade <= nivelUsuario && p.Status == StatusProgresso.Concluido
+                group p by l.UnidadeId into g
+                select new { UnidadeId = g.Key, Concluidas = g.Select(x => x.LicaoAlternativaId).Distinct().Count(), Corretas = g.Count(x => x.Correta) }
+            ).ToListAsync();
+
+            var videoPorUnidade = await (
+                from p in _context.ProgressosVideo
+                join l in _context.LicoesVideo on p.LicaoVideoId equals l.IdLicaoVideo
+                where p.UsuarioId == usuarioId && l.NivelDificuldade <= nivelUsuario && p.Status == StatusProgresso.Concluido
+                group p by l.UnidadeId into g
+                select new { UnidadeId = g.Key, Concluidos = g.Select(x => x.LicaoVideoId).Distinct().Count() }
+            ).ToListAsync();
+
+            var totalVideoPorUnidade = await _context.LicoesVideo
+                .Where(l => l.NivelDificuldade <= nivelUsuario)
+                .GroupBy(l => l.UnidadeId)
+                .Select(g => new { UnidadeId = g.Key, Total = g.Count() })
+                .ToListAsync();
+
+            var vibracaoPorUnidade = await (
+                from p in _context.ProgressosVibracao
+                join l in _context.LicoesVibracao on p.LicaoVibracaoId equals l.IdLicaoVibracao
+                where p.UsuarioId == usuarioId && p.Status == StatusProgresso.Concluido
+                group p by l.UnidadeId into g
+                select new { UnidadeId = g.Key, Concluidas = g.Select(x => x.LicaoVibracaoId).Distinct().Count() }
+            ).ToListAsync();
+
+            var totalVibracaoPorUnidade = await _context.LicoesVibracao
+                .GroupBy(l => l.UnidadeId)
+                .Select(g => new { UnidadeId = g.Key, Total = g.Count() })
+                .ToListAsync();
+
+            var unidades = await _context.Unidades.Select(u => new { u.IdUnidade, u.Nome }).ToListAsync();
+
+            double? Acerto(int? concluidas, int? corretas) =>
+                concluidas is null or 0 ? null : Math.Round((double)corretas! / concluidas.Value * 100, 1);
+
+            int? ConcluidoPercentual(int concluidos, int total) =>
+                total == 0 ? null : (int)Math.Round((double)concluidos / total * 100);
+
+            var resultado = unidades.Select(u =>
+            {
+                var fala = falaPorUnidade.FirstOrDefault(x => x.UnidadeId == u.IdUnidade);
+                var alternativa = alternativaPorUnidade.FirstOrDefault(x => x.UnidadeId == u.IdUnidade);
+                var video = videoPorUnidade.FirstOrDefault(x => x.UnidadeId == u.IdUnidade);
+                var totalVideo = totalVideoPorUnidade.FirstOrDefault(x => x.UnidadeId == u.IdUnidade)?.Total ?? 0;
+                var vibracao = vibracaoPorUnidade.FirstOrDefault(x => x.UnidadeId == u.IdUnidade);
+                var totalVibracao = totalVibracaoPorUnidade.FirstOrDefault(x => x.UnidadeId == u.IdUnidade)?.Total ?? 0;
+
+                var acertoFala = Acerto(fala?.Concluidas, fala?.Corretas);
+                var acertoAlternativa = Acerto(alternativa?.Concluidas, alternativa?.Corretas);
+
+                double? acertoGeral = null;
+                int concluidasGeral = (fala?.Concluidas ?? 0) + (alternativa?.Concluidas ?? 0);
+                int corretasGeral = (fala?.Corretas ?? 0) + (alternativa?.Corretas ?? 0);
+                if (concluidasGeral > 0) acertoGeral = Math.Round((double)corretasGeral / concluidasGeral * 100, 1);
+
+                return new
+                {
+                    UnidadeId = u.IdUnidade,
+                    Nome = u.Nome,
+                    AcertoFala = acertoFala,
+                    AcertoInterpretacao = acertoAlternativa,
+                    ConcluidoVideo = ConcluidoPercentual(video?.Concluidos ?? 0, totalVideo),
+                    ConcluidoVibracao = ConcluidoPercentual(vibracao?.Concluidas ?? 0, totalVibracao),
+                    AcertoGeralUnidade = acertoGeral
+                };
+            }).ToList();
+
+            return Ok(resultado);
         }
 
         [HttpGet("ofensiva/{usuarioId}")]

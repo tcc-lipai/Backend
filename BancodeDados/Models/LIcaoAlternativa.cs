@@ -15,6 +15,7 @@ namespace Backend.Models
         public string D { get; set; } = string.Empty;
         public string RespostaCerta { get; set; } = string.Empty;
         public decimal ValorGanho { get; set; }
+        public NivelDificuldade NivelDificuldade { get; set; }
 
         public int UnidadeId { get; set; }
         public Unidade? Unidade { get; set; }

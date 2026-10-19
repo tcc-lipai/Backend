@@ -1,4 +1,6 @@
-﻿namespace Backend.Dtos
+﻿using Backend.Models;
+
+namespace Backend.Dtos
 {
     public class LicaoAlternativaCriacaoDto
     {
@@ -11,5 +13,6 @@
         public string D { get; set; } = string.Empty;
         public string RespostaCerta { get; set; } = string.Empty;
         public decimal ValorGanho { get; set; }
+        public NivelDificuldade NivelDificuldade { get; set; }
     }
 }

@@ -20,7 +20,12 @@ namespace Backend.Controllers
             _context = context;
         }
 
-        private async Task<IActionResult?> VerificarAcesso(bool ehVibracao)
+        /// <summary>
+        /// Checa se o usuário logado pode acessar um conteúdo com o nível dado
+        /// (acesso cumulativo — ver RegraNivelService.PodeAcessarConteudo).
+        /// Retorna null (libera) pra quem não é "Usuario" (Admin/Profissional).
+        /// </summary>
+        private async Task<IActionResult?> VerificarAcesso(NivelDificuldade nivelConteudo)
         {
             var role = User.FindFirstValue(ClaimTypes.Role);
             if (role != "Usuario") return null;
@@ -29,10 +34,7 @@ namespace Backend.Controllers
             var usuario = await _context.Usuarios.FindAsync(usuarioId);
             if (usuario == null) return NotFound();
 
-            bool pode = ehVibracao
-                ? RegraNivelService.PodeAcessarVibracao(usuario.NivelDificuldade)
-                : RegraNivelService.PodeAcessarOutrosTipos(usuario.NivelDificuldade);
-
+            bool pode = RegraNivelService.PodeAcessarConteudo(usuario.NivelDificuldade, nivelConteudo);
             return pode ? null : Forbid();
         }
 
@@ -54,7 +56,8 @@ namespace Backend.Controllers
                 C = dto.C,
                 D = dto.D,
                 RespostaCerta = dto.RespostaCerta,
-                ValorGanho = dto.ValorGanho
+                ValorGanho = dto.ValorGanho,
+                NivelDificuldade = dto.NivelDificuldade
             };
 
             _context.LicoesAlternativa.Add(licao);
@@ -67,11 +70,12 @@ namespace Backend.Controllers
         [Authorize]
         public async Task<IActionResult> GetAlternativaPorId(int id)
         {
-            var bloqueio = await VerificarAcesso(ehVibracao: false);
-            if (bloqueio != null) return bloqueio;
-
             var licao = await _context.LicoesAlternativa.FindAsync(id);
             if (licao == null) return NotFound();
+
+            var bloqueio = await VerificarAcesso(licao.NivelDificuldade);
+            if (bloqueio != null) return bloqueio;
+
             return Ok(licao);
         }
 
@@ -91,6 +95,7 @@ namespace Backend.Controllers
             licao.D = dto.D;
             licao.RespostaCerta = dto.RespostaCerta;
             licao.ValorGanho = dto.ValorGanho;
+            licao.NivelDificuldade = dto.NivelDificuldade;
 
             await _context.SaveChangesAsync();
             return NoContent();
@@ -136,11 +141,12 @@ namespace Backend.Controllers
         [Authorize]
         public async Task<IActionResult> GetFalaPorId(int id)
         {
-            var bloqueio = await VerificarAcesso(ehVibracao: false);
-            if (bloqueio != null) return bloqueio;
-
             var licao = await _context.LicoesFala.FindAsync(id);
             if (licao == null) return NotFound();
+
+            var bloqueio = await VerificarAcesso(licao.NivelDificuldade);
+            if (bloqueio != null) return bloqueio;
+
             return Ok(licao);
         }
 
@@ -197,7 +203,8 @@ namespace Backend.Controllers
                 UnidadeId = dto.UnidadeId,
                 Titulo = dto.Titulo,
                 VideoDescricao = dto.VideoDescricao,
-                VideoUrl = dto.VideoUrl
+                VideoUrl = dto.VideoUrl,
+                NivelDificuldade = dto.NivelDificuldade
             };
 
             _context.LicoesVideo.Add(licao);
@@ -210,11 +217,12 @@ namespace Backend.Controllers
         [Authorize]
         public async Task<IActionResult> GetVideoPorId(int id)
         {
-            var bloqueio = await VerificarAcesso(ehVibracao: false);
-            if (bloqueio != null) return bloqueio;
-
             var licao = await _context.LicoesVideo.FindAsync(id);
             if (licao == null) return NotFound();
+
+            var bloqueio = await VerificarAcesso(licao.NivelDificuldade);
+            if (bloqueio != null) return bloqueio;
+
             return Ok(licao);
         }
 
@@ -229,6 +237,7 @@ namespace Backend.Controllers
             licao.Titulo = dto.Titulo;
             licao.VideoDescricao = dto.VideoDescricao;
             licao.VideoUrl = dto.VideoUrl;
+            licao.NivelDificuldade = dto.NivelDificuldade;
 
             await _context.SaveChangesAsync();
             return NoContent();
@@ -270,8 +279,8 @@ namespace Backend.Controllers
         [Authorize]
         public async Task<IActionResult> GetVibracaoPorId(int id)
         {
-            var bloqueio = await VerificarAcesso(ehVibracao: true);
-            if (bloqueio != null) return bloqueio;
+            // Vibração representa o nível 1 (Iniciante) e fica sempre liberada
+            // pra qualquer usuário autenticado — ver RegraNivelService.PodeAcessarVibracao.
 
             var licao = await _context.LicoesVibracao.FindAsync(id);
             if (licao == null) return NotFound();
