@@ -69,7 +69,7 @@ namespace Backend.Controllers
                     p.Email,
                     p.Registro,
                     p.CodigoAcesso,
-                    QtdePacientes = p.Pacientes.Count
+                    QtdePacientes = p.Vinculos.Count
                 })
                 .ToListAsync();
 
@@ -81,7 +81,7 @@ namespace Backend.Controllers
         public async Task<IActionResult> GetProfissionalPorId(int id)
         {
             var profissional = await _context.Profissionais
-                .Include(p => p.Pacientes)
+                .Include(p => p.Vinculos).ThenInclude(v => v.Usuario)
                 .FirstOrDefaultAsync(p => p.IdProfissional == id);
 
             if (profissional == null)
@@ -94,8 +94,8 @@ namespace Backend.Controllers
                 profissional.Email,
                 profissional.Registro,
                 profissional.CodigoAcesso,
-                QtdePacientes = profissional.Pacientes.Count,
-                Pacientes = profissional.Pacientes.Select(u => new
+                QtdePacientes = profissional.Vinculos.Count,
+                Pacientes = profissional.Vinculos.Select(v => v.Usuario!).Select(u => new
                 {
                     u.IdUsuario,
                     u.Nome,
@@ -153,8 +153,9 @@ namespace Backend.Controllers
         {
             var profissionalId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
 
-            var pacientes = await _context.Usuarios
-                .Where(u => u.ProfissionalId == profissionalId)
+            var pacientes = await _context.VinculosProfissional
+                .Where(v => v.ProfissionalId == profissionalId)
+                .Select(v => v.Usuario!)
                 .Select(u => new
                 {
                     u.IdUsuario,

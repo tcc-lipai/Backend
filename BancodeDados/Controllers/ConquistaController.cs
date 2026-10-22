@@ -123,8 +123,8 @@ namespace Backend.Controllers
             if (role == "Usuario" && idLogado != usuarioId) return Forbid();
             if (role == "Profissional")
             {
-                var ehPaciente = await _context.Usuarios
-                    .AnyAsync(u => u.IdUsuario == usuarioId && u.ProfissionalId == idLogado);
+                var ehPaciente = await _context.VinculosProfissional
+                    .AnyAsync(v => v.UsuarioId == usuarioId && v.ProfissionalId == idLogado);
                 if (!ehPaciente) return Forbid();
             }
 

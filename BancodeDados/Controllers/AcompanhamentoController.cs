@@ -36,7 +36,9 @@ namespace Backend.Controllers
             var usuario = await _context.Usuarios.FirstOrDefaultAsync(u => u.IdUsuario == usuarioId);
             if (usuario == null) return (null, NotFound(new { message = "Paciente não encontrado." }));
 
-            if (role == "Profissional" && usuario.ProfissionalId != idLogado) return (null, Forbid());
+            if (role == "Profissional"
+                && !await _context.VinculosProfissional.AnyAsync(v => v.UsuarioId == usuarioId && v.ProfissionalId == idLogado))
+                return (null, Forbid());
 
             return (usuario, null);
         }

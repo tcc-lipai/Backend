@@ -744,9 +744,6 @@ namespace Backend.Migrations
                     b.Property<DateTime?>("OfensivaCongeladaAte")
                         .HasColumnType("datetime2");
 
-                    b.Property<int?>("ProfissionalId")
-                        .HasColumnType("int");
-
                     b.Property<decimal>("SaldoAtual")
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
@@ -763,9 +760,25 @@ namespace Backend.Migrations
                     b.HasIndex("Email")
                         .IsUnique();
 
+                    b.ToTable("Usuarios");
+                });
+
+            modelBuilder.Entity("Backend.Models.VinculoProfissional", b =>
+                {
+                    b.Property<int>("UsuarioId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ProfissionalId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("DataVinculo")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("UsuarioId", "ProfissionalId");
+
                     b.HasIndex("ProfissionalId");
 
-                    b.ToTable("Usuarios");
+                    b.ToTable("VinculosProfissional");
                 });
 
             modelBuilder.Entity("Backend.Models.AtividadeFala", b =>
@@ -1014,14 +1027,23 @@ namespace Backend.Migrations
                     b.Navigation("Atividade");
                 });
 
-            modelBuilder.Entity("Backend.Models.Usuario", b =>
+            modelBuilder.Entity("Backend.Models.VinculoProfissional", b =>
                 {
                     b.HasOne("Backend.Models.Profissional", "Profissional")
-                        .WithMany("Pacientes")
+                        .WithMany("Vinculos")
                         .HasForeignKey("ProfissionalId")
-                        .OnDelete(DeleteBehavior.SetNull);
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Backend.Models.Usuario", "Usuario")
+                        .WithMany("Vinculos")
+                        .HasForeignKey("UsuarioId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.Navigation("Profissional");
+
+                    b.Navigation("Usuario");
                 });
 
             modelBuilder.Entity("Backend.Models.Atividade", b =>
@@ -1046,7 +1068,7 @@ namespace Backend.Migrations
 
             modelBuilder.Entity("Backend.Models.Profissional", b =>
                 {
-                    b.Navigation("Pacientes");
+                    b.Navigation("Vinculos");
                 });
 
             modelBuilder.Entity("Backend.Models.Unidade", b =>
@@ -1069,6 +1091,8 @@ namespace Backend.Migrations
                     b.Navigation("Notificacoes");
 
                     b.Navigation("ProdutoUsuarios");
+
+                    b.Navigation("Vinculos");
                 });
 #pragma warning restore 612, 618
         }

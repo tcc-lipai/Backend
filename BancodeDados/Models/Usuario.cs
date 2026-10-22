@@ -15,8 +15,7 @@ namespace Backend.Models
 
         [Required]
         public NivelDificuldade NivelDificuldade { get; set; }
-        public int? ProfissionalId { get; set; }
-        public Profissional? Profissional { get; set; }
+        public List<VinculoProfissional> Vinculos { get; set; } = new();
 
         public List<Notificacao> Notificacoes { get; set; } = new();
         public List<ConquistaUsuario> ConquistasUsuario { get; set; } = new();

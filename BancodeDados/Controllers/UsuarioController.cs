@@ -29,17 +29,8 @@ namespace Backend.Controllers
             if (emailExiste)
                 return BadRequest(new { message = "Este e-mail já está em uso." });
 
-            int? profissionalId = null;
-            if (!string.IsNullOrWhiteSpace(dto.CodigoProfissional))
-            {
-                var profissional = await _context.Profissionais
-                    .FirstOrDefaultAsync(p => p.CodigoAcesso == dto.CodigoProfissional);
-
-                if (profissional == null)
-                    return BadRequest(new { message = "Código de profissional inválido." });
-
-                profissionalId = profissional.IdProfissional;
-            }
+            var (profissionais, erroCodigo) = await ResolverCodigos(dto.CodigoProfissional);
+            if (erroCodigo != null) return BadRequest(new { message = erroCodigo });
 
             var novoUsuario = new Usuario
             {
@@ -48,8 +39,8 @@ namespace Backend.Controllers
                 SenhaHash = PasswordHasher.Hash(dto.Senha),
                 NivelDificuldade = dto.NivelDificuldade,
                 Diagnostico = dto.Diagnostico,
-                ProfissionalId = profissionalId,
-                SaldoAtual = 0
+                SaldoAtual = 0,
+                Vinculos = profissionais.Select(p => new VinculoProfissional { ProfissionalId = p.IdProfissional }).ToList()
             };
 
             _context.Usuarios.Add(novoUsuario);
@@ -61,7 +52,7 @@ namespace Backend.Controllers
                 novoUsuario.Nome,
                 novoUsuario.Email,
                 novoUsuario.NivelDificuldade,
-                VinculadoAProfissional = profissionalId != null
+                VinculadoAProfissional = profissionais.Count > 0
             });
         }
 
@@ -73,16 +64,90 @@ namespace Backend.Controllers
             var usuario = await _context.Usuarios.FindAsync(usuarioId);
             if (usuario == null) return NotFound();
 
+            var codigo = (dto.CodigoProfissional ?? "").Trim().ToUpperInvariant();
             var profissional = await _context.Profissionais
-                .FirstOrDefaultAsync(p => p.CodigoAcesso == dto.CodigoProfissional);
+                .FirstOrDefaultAsync(p => p.CodigoAcesso == codigo);
 
             if (profissional == null)
                 return BadRequest(new { message = "Código de profissional inválido." });
 
-            usuario.ProfissionalId = profissional.IdProfissional;
+            var vinculos = await _context.VinculosProfissional.Where(v => v.UsuarioId == usuarioId).ToListAsync();
+            if (vinculos.Any(v => v.ProfissionalId == profissional.IdProfissional))
+                return BadRequest(new { message = "Você já está vinculado a este profissional." });
+            if (vinculos.Count >= VinculoProfissional.Maximo)
+                return BadRequest(new { message = $"Você já tem {VinculoProfissional.Maximo} profissionais vinculados. Remova um para adicionar outro." });
+
+            _context.VinculosProfissional.Add(new VinculoProfissional
+            {
+                UsuarioId = usuarioId,
+                ProfissionalId = profissional.IdProfissional
+            });
             await _context.SaveChangesAsync();
 
-            return Ok(new { message = "Conta vinculada com sucesso." });
+            return Ok(new { message = "Conta vinculada com sucesso.", profissional = profissional.Nome });
+        }
+
+        /// <summary>Profissionais vinculados ao aluno logado (maximo 3).</summary>
+        [HttpGet("meus-profissionais")]
+        [Authorize(Roles = "Usuario")]
+        public async Task<IActionResult> GetMeusProfissionais()
+        {
+            var usuarioId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+
+            var lista = await _context.VinculosProfissional
+                .Where(v => v.UsuarioId == usuarioId)
+                .OrderBy(v => v.DataVinculo)
+                .Select(v => new
+                {
+                    v.Profissional!.IdProfissional,
+                    v.Profissional.Nome,
+                    v.Profissional.Email,
+                    v.Profissional.Registro,
+                    v.DataVinculo
+                })
+                .ToListAsync();
+
+            return Ok(new { Maximo = VinculoProfissional.Maximo, Profissionais = lista });
+        }
+
+        [HttpDelete("meus-profissionais/{profissionalId}")]
+        [Authorize(Roles = "Usuario")]
+        public async Task<IActionResult> DesvincularProfissional(int profissionalId)
+        {
+            var usuarioId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+
+            var vinculo = await _context.VinculosProfissional
+                .FirstOrDefaultAsync(v => v.UsuarioId == usuarioId && v.ProfissionalId == profissionalId);
+            if (vinculo == null)
+                return NotFound(new { message = "Você não está vinculado a este profissional." });
+
+            _context.VinculosProfissional.Remove(vinculo);
+            await _context.SaveChangesAsync();
+
+            return NoContent();
+        }
+
+        /// <summary>
+        /// Resolve uma lista de codigos de profissional (separados por virgula/espaco/;) em profissionais.
+        /// Aceita no maximo VinculoProfissional.Maximo codigos distintos.
+        /// </summary>
+        private async Task<(List<Profissional> Profissionais, string? Erro)> ResolverCodigos(string? codigos)
+        {
+            var lista = (codigos ?? "")
+                .Split(new[] { ',', ';', ' ' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Select(c => c.ToUpperInvariant())
+                .Distinct()
+                .ToList();
+
+            if (lista.Count == 0) return (new List<Profissional>(), null);
+            if (lista.Count > VinculoProfissional.Maximo)
+                return (new List<Profissional>(), $"Um aluno pode ter no máximo {VinculoProfissional.Maximo} profissionais vinculados.");
+
+            var encontrados = await _context.Profissionais.Where(p => lista.Contains(p.CodigoAcesso)).ToListAsync();
+            if (encontrados.Count != lista.Count)
+                return (new List<Profissional>(), "Código de profissional inválido.");
+
+            return (encontrados, null);
         }
 
         [HttpPut("{id}")]
@@ -115,22 +180,19 @@ namespace Backend.Controllers
             usuarioBanco.Diagnostico = dto.Diagnostico;
             usuarioBanco.NivelDificuldade = dto.NivelDificuldade;
 
-            if (role == "Admin")
+            if (role == "Admin" && dto.CodigoProfissional != null)
             {
-                if (dto.CodigoProfissional == "")
-                {
-                    usuarioBanco.ProfissionalId = null;
-                }
-                else if (!string.IsNullOrWhiteSpace(dto.CodigoProfissional))
-                {
-                    var profissional = await _context.Profissionais
-                        .FirstOrDefaultAsync(p => p.CodigoAcesso == dto.CodigoProfissional);
+                // o campo traz TODOS os codigos desejados (ate 3, separados por virgula);
+                // vazio desvincula todos. Quem nao vier na lista e removido.
+                var (desejados, erroCodigo) = await ResolverCodigos(dto.CodigoProfissional);
+                if (erroCodigo != null) return BadRequest(new { message = erroCodigo });
 
-                    if (profissional == null)
-                        return BadRequest(new { message = "Código de profissional inválido." });
+                var atuais = await _context.VinculosProfissional.Where(v => v.UsuarioId == id).ToListAsync();
+                var idsDesejados = desejados.Select(p => p.IdProfissional).ToHashSet();
 
-                    usuarioBanco.ProfissionalId = profissional.IdProfissional;
-                }
+                _context.VinculosProfissional.RemoveRange(atuais.Where(v => !idsDesejados.Contains(v.ProfissionalId)));
+                foreach (var p in desejados.Where(p => !atuais.Any(v => v.ProfissionalId == p.IdProfissional)))
+                    _context.VinculosProfissional.Add(new VinculoProfissional { UsuarioId = id, ProfissionalId = p.IdProfissional });
             }
 
             try
@@ -156,6 +218,7 @@ namespace Backend.Controllers
                     .ThenInclude(cu => cu.Conquista)
                 .Include(u => u.ProdutoUsuarios)
                     .ThenInclude(pu => pu.Produto)
+                .Include(u => u.Vinculos)
                 .ToListAsync();
 
             var resultado = usuarios.Select(u => new
@@ -166,7 +229,7 @@ namespace Backend.Controllers
                 u.Nome,
                 u.Email,
                 u.Diagnostico,
-                u.ProfissionalId,
+                ProfissionaisIds = u.Vinculos.Select(v => v.ProfissionalId),
                 u.DiasSeguidos,
                 u.UltimaAtividadeData,
                 OfensivaCongelada = u.OfensivaCongeladaAte > DateTime.UtcNow,
@@ -214,6 +277,7 @@ namespace Backend.Controllers
                     .ThenInclude(cu => cu.Conquista)
                 .Include(u => u.ProdutoUsuarios)
                     .ThenInclude(pu => pu.Produto)
+                .Include(u => u.Vinculos).ThenInclude(v => v.Profissional)
                 .FirstOrDefaultAsync(u => u.IdUsuario == id);
 
             if (usuario == null)
@@ -222,7 +286,7 @@ namespace Backend.Controllers
             if (role == "Usuario" && idLogado != id)
                 return Forbid();
 
-            if (role == "Profissional" && usuario.ProfissionalId != idLogado)
+            if (role == "Profissional" && !usuario.Vinculos.Any(v => v.ProfissionalId == idLogado))
                 return Forbid();
 
             return Ok(new
@@ -233,7 +297,11 @@ namespace Backend.Controllers
                 usuario.Nome,
                 usuario.Email,
                 usuario.Diagnostico,
-                usuario.ProfissionalId,
+                ProfissionaisIds = usuario.Vinculos.Select(v => v.ProfissionalId),
+                // codigos so pro admin (preenche o formulario de edicao)
+                CodigosProfissionais = role == "Admin"
+                    ? usuario.Vinculos.Select(v => v.Profissional!.CodigoAcesso).ToList()
+                    : null,
                 usuario.DiasSeguidos,
                 usuario.UltimaAtividadeData,
                 OfensivaCongelada = usuario.OfensivaCongeladaAte > DateTime.UtcNow,

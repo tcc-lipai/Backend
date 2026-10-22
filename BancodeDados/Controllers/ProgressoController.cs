@@ -479,8 +479,8 @@ namespace Backend.Controllers
 
             if (role == "Profissional")
             {
-                var ehPaciente = await _context.Usuarios
-                    .AnyAsync(u => u.IdUsuario == usuarioId && u.ProfissionalId == UsuarioLogadoId);
+                var ehPaciente = await _context.VinculosProfissional
+                    .AnyAsync(v => v.UsuarioId == usuarioId && v.ProfissionalId == UsuarioLogadoId);
                 if (!ehPaciente) return Forbid();
             }
 
@@ -511,8 +511,8 @@ namespace Backend.Controllers
             if (role == "Usuario" && UsuarioLogadoId != usuarioId) return Forbid();
             if (role == "Profissional")
             {
-                var ehPaciente = await _context.Usuarios
-                    .AnyAsync(u => u.IdUsuario == usuarioId && u.ProfissionalId == UsuarioLogadoId);
+                var ehPaciente = await _context.VinculosProfissional
+                    .AnyAsync(v => v.UsuarioId == usuarioId && v.ProfissionalId == UsuarioLogadoId);
                 if (!ehPaciente) return Forbid();
             }
 
@@ -654,8 +654,8 @@ namespace Backend.Controllers
             if (role == "Usuario" && UsuarioLogadoId != usuarioId) return Forbid();
             if (role == "Profissional")
             {
-                var ehPaciente = await _context.Usuarios
-                    .AnyAsync(u => u.IdUsuario == usuarioId && u.ProfissionalId == UsuarioLogadoId);
+                var ehPaciente = await _context.VinculosProfissional
+                    .AnyAsync(v => v.UsuarioId == usuarioId && v.ProfissionalId == UsuarioLogadoId);
                 if (!ehPaciente) return Forbid();
             }
 
@@ -753,8 +753,8 @@ namespace Backend.Controllers
             if (role == "Usuario" && UsuarioLogadoId != usuarioId) return Forbid();
             if (role == "Profissional")
             {
-                var ehPaciente = await _context.Usuarios
-                    .AnyAsync(u => u.IdUsuario == usuarioId && u.ProfissionalId == UsuarioLogadoId);
+                var ehPaciente = await _context.VinculosProfissional
+                    .AnyAsync(v => v.UsuarioId == usuarioId && v.ProfissionalId == UsuarioLogadoId);
                 if (!ehPaciente) return Forbid();
             }
 

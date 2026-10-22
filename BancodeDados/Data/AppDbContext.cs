@@ -9,6 +9,7 @@ namespace Backend.Data
 
         public DbSet<Usuario> Usuarios { get; set; }
         public DbSet<Profissional> Profissionais { get; set; }
+        public DbSet<VinculoProfissional> VinculosProfissional { get; set; }
         public DbSet<Atividade> Atividades { get; set; }
         public DbSet<Unidade> Unidades { get; set; }
         public DbSet<LicaoFala> LicoesFala { get; set; }
@@ -45,11 +46,20 @@ namespace Backend.Data
                 .HasIndex(p => p.CodigoAcesso)
                 .IsUnique();
 
-            modelBuilder.Entity<Usuario>()
-                .HasOne(u => u.Profissional)
-                .WithMany(p => p.Pacientes)
-                .HasForeignKey(u => u.ProfissionalId)
-                .OnDelete(DeleteBehavior.SetNull);
+            modelBuilder.Entity<VinculoProfissional>()
+                .HasKey(v => new { v.UsuarioId, v.ProfissionalId });
+
+            modelBuilder.Entity<VinculoProfissional>()
+                .HasOne(v => v.Usuario)
+                .WithMany(u => u.Vinculos)
+                .HasForeignKey(v => v.UsuarioId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<VinculoProfissional>()
+                .HasOne(v => v.Profissional)
+                .WithMany(p => p.Vinculos)
+                .HasForeignKey(v => v.ProfissionalId)
+                .OnDelete(DeleteBehavior.Cascade);
 
             modelBuilder.Entity<ProdutoUsuario>()
                 .HasOne(pu => pu.Usuario)

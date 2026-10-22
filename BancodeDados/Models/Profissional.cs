@@ -13,6 +13,6 @@ namespace Backend.Models
         public string? Registro { get; set; }
         public string CodigoAcesso { get; set; } = string.Empty;
 
-        public List<Usuario> Pacientes { get; set; } = new();
+        public List<VinculoProfissional> Vinculos { get; set; } = new();
     }
 }
