@@ -93,11 +93,22 @@ namespace Backend.Controllers
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> DeleteAtividadeFala(int id)
         {
-            var atividade = await _context.AtividadesFala.FindAsync(id);
+            var atividade = await _context.AtividadesFala
+                .Include(a => a.Exercicios)
+                .FirstOrDefaultAsync(a => a.IdAtividadeFala == id);
             if (atividade == null) return NotFound();
 
+            // os exercicios pertencem ao grupo: sai tudo junto (senao virariam exercicios avulsos)
+            _context.LicoesFala.RemoveRange(atividade.Exercicios);
             _context.AtividadesFala.Remove(atividade);
-            await _context.SaveChangesAsync();
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateException)
+            {
+                return Conflict(new { message = "Não é possível excluir: já existe progresso de alunos nesse conteúdo." });
+            }
             return NoContent();
         }
     }

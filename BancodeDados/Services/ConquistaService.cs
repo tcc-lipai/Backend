@@ -45,11 +45,13 @@ namespace Backend.Services
 
             var totalConcluidas = totalConcluidasAlternativa + totalConcluidasFala;
 
+            var totalCompras = await _context.ProdutoUsuarios.CountAsync(p => p.UsuarioId == usuarioId);
+
             var conquistasGanhas = new List<string>();
 
             foreach (var conquista in conquistasPendentes)
             {
-                bool atingida = AvaliarRegra(conquista.Nome, usuario, totalConcluidas, totalConcluidasFala);
+                bool atingida = AvaliarRegra(conquista.Nome, usuario, totalConcluidas, totalConcluidasFala, totalCompras);
                 if (!atingida) continue;
 
                 _context.ConquistasUsuario.Add(new ConquistaUsuario
@@ -74,7 +76,7 @@ namespace Backend.Services
             return conquistasGanhas;
         }
 
-        private static bool AvaliarRegra(string nomeConquista, Usuario usuario, int totalConcluidas, int totalConcluidasFala)
+        private static bool AvaliarRegra(string nomeConquista, Usuario usuario, int totalConcluidas, int totalConcluidasFala, int totalCompras)
         {
             return nomeConquista switch
             {
@@ -82,7 +84,7 @@ namespace Backend.Services
                 "Semana de Ouro" => usuario.DiasSeguidos >= 7,
                 "Voz Firme" => totalConcluidasFala >= 10,
                 "Dedicação Total" => usuario.DiasSeguidos >= 30,
-                "Colecionador" => false,
+                "Colecionador" => totalCompras >= 1,
                 _ => false
             };
         }

@@ -108,7 +108,14 @@ namespace Backend.Controllers
             var licao = await _context.LicoesAlternativa.FindAsync(id);
             if (licao == null) return NotFound();
             _context.LicoesAlternativa.Remove(licao);
-            await _context.SaveChangesAsync();
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateException)
+            {
+                return Conflict(new { message = "Não é possível excluir: já existe progresso de alunos nesse conteúdo." });
+            }
             return NoContent();
         }
 
@@ -186,7 +193,14 @@ namespace Backend.Controllers
             var licao = await _context.LicoesFala.FindAsync(id);
             if (licao == null) return NotFound();
             _context.LicoesFala.Remove(licao);
-            await _context.SaveChangesAsync();
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateException)
+            {
+                return Conflict(new { message = "Não é possível excluir: já existe progresso de alunos nesse conteúdo." });
+            }
             return NoContent();
         }
 
@@ -250,7 +264,14 @@ namespace Backend.Controllers
             var licao = await _context.LicoesVideo.FindAsync(id);
             if (licao == null) return NotFound();
             _context.LicoesVideo.Remove(licao);
-            await _context.SaveChangesAsync();
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateException)
+            {
+                return Conflict(new { message = "Não é possível excluir: já existe progresso de alunos nesse conteúdo." });
+            }
             return NoContent();
         }
 
@@ -309,7 +330,14 @@ namespace Backend.Controllers
             var licao = await _context.LicoesVibracao.FindAsync(id);
             if (licao == null) return NotFound();
             _context.LicoesVibracao.Remove(licao);
-            await _context.SaveChangesAsync();
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateException)
+            {
+                return Conflict(new { message = "Não é possível excluir: já existe progresso de alunos nesse conteúdo." });
+            }
             return NoContent();
         }
     }

@@ -233,6 +233,7 @@ namespace Backend.Controllers
                 usuario.Nome,
                 usuario.Email,
                 usuario.Diagnostico,
+                usuario.ProfissionalId,
                 usuario.DiasSeguidos,
                 usuario.UltimaAtividadeData,
                 OfensivaCongelada = usuario.OfensivaCongeladaAte > DateTime.UtcNow,

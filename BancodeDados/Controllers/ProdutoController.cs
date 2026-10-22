@@ -13,10 +13,12 @@ namespace Backend.Controllers
     public class ProdutoController : ControllerBase
     {
         private readonly AppDbContext _context;
+        private readonly Backend.Services.ConquistaService _conquistaService;
 
-        public ProdutoController(AppDbContext context)
+        public ProdutoController(AppDbContext context, Backend.Services.ConquistaService conquistaService)
         {
             _context = context;
+            _conquistaService = conquistaService;
         }
 
         private int UsuarioLogadoId => int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
@@ -97,9 +99,12 @@ namespace Backend.Controllers
 
             await _context.SaveChangesAsync();
 
+            var novasConquistas = await _conquistaService.VerificarEConcederAsync(UsuarioLogadoId);
+
             return Ok(new
             {
                 message = "Compra realizada com sucesso!",
+                novasConquistas,
                 novoSaldo = usuario.SaldoAtual,
                 totalGasto = total,
                 ofensivaCongeladaAte = usuario.OfensivaCongeladaAte,

@@ -64,9 +64,6 @@ namespace Backend.Controllers
             _context.ProgressosAlternativa.Add(progresso);
             await _context.SaveChangesAsync();
 
-            // Verifica conquistas desbloqueadas após conclusão
-            var novasConquistas = await _conquistaService.VerificarEConcederAsync(UsuarioLogadoId);
-
             return Ok(new { progresso.IdProgresso });
         }
 
@@ -139,7 +136,8 @@ namespace Backend.Controllers
             {
                 progresso.Correta,
                 progresso.PontuacaoObtida,
-                NovoSaldo = usuario!.SaldoAtual
+                NovoSaldo = usuario!.SaldoAtual,
+                NovasConquistas = novasConquistas
             });
         }
 
@@ -271,6 +269,8 @@ namespace Backend.Controllers
 
             await _context.SaveChangesAsync();
 
+            var novasConquistas = await _conquistaService.VerificarEConcederAsync(UsuarioLogadoId);
+
             return Ok(new
             {
                 progresso.Correta,
@@ -281,7 +281,8 @@ namespace Backend.Controllers
                 FeedbackOrigem = avaliacao.FeedbackOrigem,
                 DetalhesFonemas = avaliacao.DetalhesFonemas,
                 DecisaoAdaptativa = avaliacao.DecisaoAdaptativa,
-                NovoSaldo = usuario!.SaldoAtual
+                NovoSaldo = usuario!.SaldoAtual,
+                NovasConquistas = novasConquistas
             });
         }
 
@@ -319,7 +320,7 @@ namespace Backend.Controllers
 
             var novasConquistas = await _conquistaService.VerificarEConcederAsync(UsuarioLogadoId);
 
-            return Ok(new { progresso.IdProgresso });
+            return Ok(new { progresso.IdProgresso, novasConquistas });
         }
 
         [HttpPost("vibracao/{licaoId}/concluir")]
@@ -667,7 +668,7 @@ namespace Backend.Controllers
                 join l in _context.LicoesFala on p.LicaoFalaId equals l.IdLicaoFala
                 where p.UsuarioId == usuarioId && l.NivelDificuldade <= nivelUsuario && p.Status == StatusProgresso.Concluido
                 group p by l.UnidadeId into g
-                select new { UnidadeId = g.Key, Concluidas = g.Select(x => x.LicaoFalaId).Distinct().Count(), Corretas = g.Count(x => x.Correta) }
+                select new { UnidadeId = g.Key, Concluidas = g.Count(), Corretas = g.Count(x => x.Correta) }
             ).ToListAsync();
 
             var alternativaPorUnidade = await (
@@ -675,7 +676,7 @@ namespace Backend.Controllers
                 join l in _context.LicoesAlternativa on p.LicaoAlternativaId equals l.IdLicaoAlternativa
                 where p.UsuarioId == usuarioId && l.NivelDificuldade <= nivelUsuario && p.Status == StatusProgresso.Concluido
                 group p by l.UnidadeId into g
-                select new { UnidadeId = g.Key, Concluidas = g.Select(x => x.LicaoAlternativaId).Distinct().Count(), Corretas = g.Count(x => x.Correta) }
+                select new { UnidadeId = g.Key, Concluidas = g.Count(), Corretas = g.Count(x => x.Correta) }
             ).ToListAsync();
 
             var videoPorUnidade = await (
