@@ -182,7 +182,7 @@ namespace Backend.Controllers
         [HttpPost("fala/{idProgresso}/concluir")]
         [Authorize(Roles = "Usuario")]
         [Consumes("multipart/form-data")]
-        public async Task<IActionResult> ConcluirFala(int idProgresso, IFormFile arquivo)
+        public async Task<IActionResult> ConcluirFala(int idProgresso, IFormFile arquivo, CancellationToken ct)
         {
             var progresso = await _context.ProgressosFala
                 .Include(p => p.LicaoFala)
@@ -202,7 +202,17 @@ namespace Backend.Controllers
             try
             {
                 avaliacao = await AvaliarAudioComIa(
-                    progresso.LicaoFala!.FraseEsperada, arquivo, usuario!.EstadoAdaptativoIA);
+                    progresso.LicaoFala!.FraseEsperada, arquivo, usuario!.EstadoAdaptativoIA, ct);
+            }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested)
+            {
+                // o aluno saiu da tela (ou fechou a aba) enquanto a IA avaliava: nada foi
+                // gravado ainda, a tentativa continua pendente e o trabalho para aqui.
+                return StatusCode(499);
+            }
+            catch (OperationCanceledException)
+            {
+                return StatusCode(504, new { message = "A avaliacao do audio demorou demais. Tente novamente." });
             }
             catch (HttpRequestException)
             {
@@ -356,7 +366,7 @@ namespace Backend.Controllers
         /// </summary>
         [HttpGet("fala/proximo-exercicio")]
         [Authorize(Roles = "Usuario")]
-        public async Task<IActionResult> ProximoExercicioFala([FromQuery] bool prova = false)
+        public async Task<IActionResult> ProximoExercicioFala(CancellationToken ct, [FromQuery] bool prova = false)
         {
             var usuario = await _context.Usuarios.FindAsync(UsuarioLogadoId);
             if (usuario == null) return NotFound();
@@ -371,7 +381,15 @@ namespace Backend.Controllers
             try
             {
                 resposta = await httpClient.GetAsync(
-                    $"/ia/proximo-exercicio?estado_adaptativo={estado}&modo_prova={prova.ToString().ToLower()}");
+                    $"/ia/proximo-exercicio?estado_adaptativo={estado}&modo_prova={prova.ToString().ToLower()}", ct);
+            }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested)
+            {
+                return StatusCode(499);
+            }
+            catch (OperationCanceledException)
+            {
+                return StatusCode(504, new { message = "O servico de IA demorou demais para responder." });
             }
             catch (HttpRequestException)
             {
@@ -383,7 +401,7 @@ namespace Backend.Controllers
             if (!resposta.IsSuccessStatusCode)
                 return StatusCode(502, new { message = "O serviÃ§o de IA retornou um erro." });
 
-            var exercicio = await resposta.Content.ReadFromJsonAsync<ProximoExercicioIaDto>();
+            var exercicio = await resposta.Content.ReadFromJsonAsync<ProximoExercicioIaDto>(cancellationToken: ct);
             if (exercicio is null)
                 return StatusCode(502, new { message = "Resposta vazia do serviÃ§o de IA." });
 
@@ -406,8 +424,13 @@ namespace Backend.Controllers
             });
         }
 
+        // A avaliacao acustica roda em CPU no servico de IA: limitar quantas rodam ao mesmo
+        // tempo evita encher o servico (e as threads daqui) quando varios alunos gravam juntos.
+        // Quem passa do limite espera na fila (cancelavel pelo ct, se o aluno desistir).
+        private static readonly SemaphoreSlim _limiteAvaliacoesIa = new(3, 3);
+
         private async Task<AvaliacaoFalaIaDto> AvaliarAudioComIa(
-            string textoEsperado, IFormFile arquivo, string? estadoAdaptativo)
+            string textoEsperado, IFormFile arquivo, string? estadoAdaptativo, CancellationToken ct)
         {
             using var conteudoAudio = new StreamContent(arquivo.OpenReadStream());
             // O navegador manda algo como "audio/webm;codecs=opus" â€” Parse aceita os
@@ -426,12 +449,21 @@ namespace Backend.Controllers
             };
 
             var httpClient = _httpClientFactory.CreateClient("IA");
-            var resposta = await httpClient.PostAsync("/ia/avaliar-fala", form);
+            HttpResponseMessage resposta;
+            await _limiteAvaliacoesIa.WaitAsync(ct);
+            try
+            {
+                resposta = await httpClient.PostAsync("/ia/avaliar-fala", form, ct);
+            }
+            finally
+            {
+                _limiteAvaliacoesIa.Release();
+            }
 
             if (!resposta.IsSuccessStatusCode)
                 throw new HttpRequestException($"ServiÃ§o de IA retornou {(int)resposta.StatusCode}.");
 
-            var resultado = await resposta.Content.ReadFromJsonAsync<AvaliacaoFalaIaDto>();
+            var resultado = await resposta.Content.ReadFromJsonAsync<AvaliacaoFalaIaDto>(cancellationToken: ct);
             if (resultado is null || !resultado.Sucesso)
                 throw new HttpRequestException("Resposta invÃ¡lida do serviÃ§o de IA.");
             return resultado;

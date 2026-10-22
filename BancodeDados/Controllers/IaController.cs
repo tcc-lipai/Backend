@@ -20,30 +20,38 @@ namespace Backend.Controllers
 
         [HttpGet("dica-fonema")]
         [Authorize]
-        public async Task<IActionResult> DicaFonema([FromQuery] string fonema = "A")
+        public async Task<IActionResult> DicaFonema(CancellationToken ct, [FromQuery] string fonema = "A")
         {
-            return await Repassar($"/ia/dica-fonema?fonema={Uri.EscapeDataString(fonema)}");
+            return await Repassar($"/ia/dica-fonema?fonema={Uri.EscapeDataString(fonema)}", ct);
         }
 
         [HttpGet("health")]
         [AllowAnonymous]
-        public async Task<IActionResult> Health()
+        public async Task<IActionResult> Health(CancellationToken ct)
         {
-            return await Repassar("/ia/health");
+            return await Repassar("/ia/health", ct);
         }
 
-        private async Task<IActionResult> Repassar(string caminho)
+        private async Task<IActionResult> Repassar(string caminho, CancellationToken ct)
         {
             var httpClient = _httpClientFactory.CreateClient("IA");
             try
             {
-                var resposta = await httpClient.GetAsync(caminho);
-                var corpo = await resposta.Content.ReadAsStringAsync();
+                var resposta = await httpClient.GetAsync(caminho, ct);
+                var corpo = await resposta.Content.ReadAsStringAsync(ct);
 
                 if (!resposta.IsSuccessStatusCode)
                     return StatusCode(502, new { message = "O serviço de IA retornou um erro.", detalhe = corpo });
 
                 return Content(corpo, "application/json");
+            }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested)
+            {
+                return StatusCode(499);
+            }
+            catch (OperationCanceledException)
+            {
+                return StatusCode(504, new { message = "O serviço de IA demorou demais para responder." });
             }
             catch (HttpRequestException)
             {

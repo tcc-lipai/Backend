@@ -21,14 +21,16 @@ namespace Backend.Controllers
         }
 
         [HttpPost]
-        [Authorize(Roles = "Usuario")]
+        [Authorize(Roles = "Usuario,Profissional")]
         public async Task<IActionResult> PostMensagem(MensagemContatoCriacaoDto dto)
         {
-            var usuarioId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+            var id = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+            var ehProfissional = User.FindFirstValue(ClaimTypes.Role) == "Profissional";
 
             var mensagem = new MensagemContato
             {
-                UsuarioId = usuarioId,
+                UsuarioId = ehProfissional ? null : id,
+                ProfissionalId = ehProfissional ? id : null,
                 Mensagem = dto.Mensagem,
                 DataEnvio = DateTime.UtcNow
             };
@@ -44,13 +46,13 @@ namespace Backend.Controllers
         public async Task<IActionResult> GetMensagens()
         {
             var mensagens = await _context.MensagensContato
-                .Include(m => m.Usuario)
                 .OrderByDescending(m => m.DataEnvio)
                 .Select(m => new
                 {
                     m.IdMensagem,
-                    NomeUsuario = m.Usuario!.Nome,
-                    EmailUsuario = m.Usuario.Email,
+                    NomeUsuario = m.Usuario != null ? m.Usuario.Nome : m.Profissional!.Nome,
+                    EmailUsuario = m.Usuario != null ? m.Usuario.Email : m.Profissional!.Email,
+                    Origem = m.Usuario != null ? "Aluno" : "Profissional",
                     m.Mensagem,
                     m.DataEnvio,
                     m.Respondida

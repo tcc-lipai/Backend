@@ -353,13 +353,18 @@ namespace Backend.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<int?>("ProfissionalId")
+                        .HasColumnType("int");
+
                     b.Property<bool>("Respondida")
                         .HasColumnType("bit");
 
-                    b.Property<int>("UsuarioId")
+                    b.Property<int?>("UsuarioId")
                         .HasColumnType("int");
 
                     b.HasKey("IdMensagem");
+
+                    b.HasIndex("ProfissionalId");
 
                     b.HasIndex("UsuarioId");
 
@@ -868,11 +873,15 @@ namespace Backend.Migrations
 
             modelBuilder.Entity("Backend.Models.MensagemContato", b =>
                 {
+                    b.HasOne("Backend.Models.Profissional", "Profissional")
+                        .WithMany()
+                        .HasForeignKey("ProfissionalId");
+
                     b.HasOne("Backend.Models.Usuario", "Usuario")
                         .WithMany()
-                        .HasForeignKey("UsuarioId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .HasForeignKey("UsuarioId");
+
+                    b.Navigation("Profissional");
 
                     b.Navigation("Usuario");
                 });
