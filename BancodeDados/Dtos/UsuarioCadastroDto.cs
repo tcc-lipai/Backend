@@ -11,7 +11,7 @@ namespace Backend.Dtos
         [Required, EmailAddress]
         public string Email { get; set; } = string.Empty;
 
-        [Required, MinLength(6)]
+        [Required, MinLength(8, ErrorMessage = "A senha precisa ter pelo menos 8 caracteres.")]
         public string Senha { get; set; } = string.Empty;
 
         [Range(1, 4, ErrorMessage = "Informe um nível de dificuldade válido (1 a 4).")]
