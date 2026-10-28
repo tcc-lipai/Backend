@@ -1,0 +1,79 @@
+# LipAI Back-end + SQL Server em containers.
+#
+#   1) copie .env.example para .env e preencha os valores
+#   2) docker compose up --build -d
+#   3) API em http://localhost:5251  (Swagger em http://localhost:5251/ se SWAGGER=true)
+#
+# A IA (LipAI_LLM) continua rodando fora do Docker, na máquina: a API a acessa por
+# http://host.docker.internal:8001 (mude IA_BASE_URL no .env se ela estiver em outro lugar).
+
+services:
+  db:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: lipai-db
+    restart: unless-stopped
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_PID: "Express"
+      MSSQL_SA_PASSWORD: ${SA_PASSWORD:?defina SA_PASSWORD no .env (mín. 8 caracteres, maiúscula, minúscula, número e símbolo)}
+    ports:
+      # só no seu computador (127.0.0.1): dá pra conectar com SSMS/Azure Data Studio em localhost,14330
+      - "127.0.0.1:14330:1433"
+    volumes:
+      - lipai-dados:/var/opt/mssql
+    healthcheck:
+      test: >
+        /opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P "$$MSSQL_SA_PASSWORD" -Q "SELECT 1" -b -o /dev/null
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: lipai-api
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "${API_PORT:-5251}:10000"
+    # permite acessar a IA que roda na máquina (host.docker.internal já existe no Docker Desktop;
+    # a linha abaixo faz o mesmo funcionar no Linux)
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_URLS: http://0.0.0.0:10000
+      # dentro do Docker só há HTTP, então não há porta HTTPS pra redirecionar
+      UseHttpsRedirection: "false"
+
+      ConnectionStrings__DefaultConnection: >-
+        Server=db,1433;Database=LipaiDB;User Id=sa;Password=${SA_PASSWORD};TrustServerCertificate=True;
+
+      # cria/atualiza as tabelas sozinho ao iniciar (espera o SQL Server ficar pronto)
+      Database__MigrarAoIniciar: "true"
+      # conquistas, dicionário, produtos e conteúdo de exemplo (idempotente)
+      Database__PopularDadosExemplo: ${POPULAR_DADOS_EXEMPLO:-true}
+      Swagger__Habilitar: ${SWAGGER:-false}
+
+      Jwt__Key: ${JWT_KEY:?defina JWT_KEY no .env (mín. 32 caracteres aleatórios)}
+      Jwt__Issuer: LipAI
+      Jwt__Audience: LipAI
+      Jwt__ExpiresInHours: "8"
+
+      Admin__Email: ${ADMIN_EMAIL:?defina ADMIN_EMAIL no .env}
+      Admin__SenhaHash: ${ADMIN_SENHA_HASH:?defina ADMIN_SENHA_HASH no .env (hash BCrypt da senha do admin)}
+
+      # origens do Front liberadas no CORS (separe várias por vírgula no .env: CORS_ORIGENS)
+      Cors__AllowedOrigins__0: ${CORS_ORIGEM:-http://localhost:5173}
+      Cors__AllowedOrigins__1: ${CORS_ORIGEM_2:-http://localhost:5174}
+
+      Ia__BaseUrl: ${IA_BASE_URL:-http://host.docker.internal:8001}
+      Ia__MmsBaseUrl: ${IA_MMS_BASE_URL:-http://host.docker.internal:8000}
+      Ia__TimeoutSegundos: "120"
+
+volumes:
+  lipai-dados:

@@ -1,13 +1,27 @@
 ﻿.git
+.gitignore
 .vs
 .vscode
-bin
-obj
+.claude
+**/bin
+**/obj
 *.user
 *.suo
-appsettings.Development.json
-appsettings.Production.json
-appsettings.Local.json
+
+# NUNCA entram na imagem: contêm segredos (chave JWT, hash do admin) e a conexão do SQL Express local.
+# Em Docker tudo isso vem de variáveis de ambiente (docker-compose.yml / .env).
+**/appsettings.json
+**/appsettings.Development.json
+**/appsettings.Production.json
+**/appsettings.Local.json
+.env
+.env.*
+!.env.example
+
 *.pfx
 *.mdf
 *.ldf
+*.bak
+README.md
+docker-compose*.yml
+Dockerfile

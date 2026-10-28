@@ -64,6 +64,12 @@ builder.Services.AddHttpClient("IA", (sp, client) =>
 });
 
 var jwtSettings = builder.Configuration.GetSection("Jwt");
+var jwtKey = jwtSettings["Key"];
+if (string.IsNullOrWhiteSpace(jwtKey) || jwtKey.Length < 32)
+{
+    // falha logo na partida com mensagem clara (em Docker: variável Jwt__Key no .env)
+    throw new InvalidOperationException("Jwt:Key não configurada (mínimo 32 caracteres). No Docker, defina Jwt__Key.");
+}
 builder.Services.AddAuthentication(options =>
 {
     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -79,7 +85,7 @@ builder.Services.AddAuthentication(options =>
         ValidateIssuerSigningKey = true,
         ValidIssuer = jwtSettings["Issuer"],
         ValidAudience = jwtSettings["Audience"],
-        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings["Key"]!))
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
     };
 });
 
@@ -113,7 +119,8 @@ builder.Services.AddSwaggerGen(options =>
 
 var app = builder.Build();
 
-if (app.Environment.IsDevelopment())
+// Swagger: sempre em Development; em outros ambientes (ex.: Docker) só se Swagger__Habilitar=true.
+if (app.Environment.IsDevelopment() || builder.Configuration.GetValue<bool>("Swagger:Habilitar"))
 {
     app.UseSwagger(c => c.RouteTemplate = "swagger/{documentName}/swagger.json");
     app.UseSwaggerUI(options =>
@@ -121,14 +128,46 @@ if (app.Environment.IsDevelopment())
         options.SwaggerEndpoint("/swagger/v1/swagger.json", "v1");
         options.RoutePrefix = string.Empty;
     });
+}
 
-    // Dados de exemplo para desenvolvimento (idempotente).
+// Banco: em Docker o container sobe com o banco vazio, então a API aplica as migrations
+// sozinha ao iniciar (Database__MigrarAoIniciar=true). Tenta várias vezes porque o SQL Server
+// pode demorar alguns segundos pra aceitar conexão depois que o container dele sobe.
+if (builder.Configuration.GetValue<bool>("Database:MigrarAoIniciar"))
+{
+    const int tentativasMaximas = 15;
+    for (var tentativa = 1; ; tentativa++)
+    {
+        try
+        {
+            using var scopeMigracao = app.Services.CreateScope();
+            var dbMigracao = scopeMigracao.ServiceProvider.GetRequiredService<Backend.Data.AppDbContext>();
+            await dbMigracao.Database.MigrateAsync();
+            app.Logger.LogInformation("Migrations aplicadas.");
+            break;
+        }
+        catch (Exception ex) when (tentativa < tentativasMaximas)
+        {
+            app.Logger.LogWarning("Banco ainda indisponível (tentativa {Tentativa}/{Max}): {Mensagem}", tentativa, tentativasMaximas, ex.Message);
+            await Task.Delay(TimeSpan.FromSeconds(4));
+        }
+    }
+}
+
+// Dados de exemplo (conquistas, dicionário, produtos, conteúdo) — idempotente. Sempre em
+// Development; em outros ambientes só se Database__PopularDadosExemplo=true.
+if (app.Environment.IsDevelopment() || builder.Configuration.GetValue<bool>("Database:PopularDadosExemplo"))
+{
     using var scope = app.Services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<Backend.Data.AppDbContext>();
     await Backend.Data.SeedData.PopularAsync(db);
 }
 
-app.UseHttpsRedirection();
+// Atrás de um proxy/Docker só em HTTP não há porta HTTPS pra redirecionar: desligue com UseHttpsRedirection=false.
+if (builder.Configuration.GetValue("UseHttpsRedirection", true))
+{
+    app.UseHttpsRedirection();
+}
 
 app.Use(async (context, next) =>
 {

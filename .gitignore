@@ -49,3 +49,7 @@ appsettings.json
 *.mdf
 *.ldf
 *.db
+
+# Docker: variáveis reais (senha do SQL, chave JWT, hash do admin) — só o .env.example vai pro Git
+.env
+*.bak
