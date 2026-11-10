@@ -140,11 +140,17 @@ namespace Backend.Data
                 await db.SaveChangesAsync();
             }
 
-            var u3 = await db.Unidades.FirstOrDefaultAsync(u => u.Nome == "Unidade 3 — Fonema A (Nível Básico)");
+            var u3 = await db.Unidades.FirstOrDefaultAsync(u =>
+                u.Nome == "Fonema A" || u.Nome == "Unidade 3 — Fonema A (Nível Básico)");
             if (u3 == null)
             {
-                u3 = new Unidade { Nome = "Unidade 3 — Fonema A (Nível Básico)", AtividadeId = atividade.IdAtividade };
+                u3 = new Unidade { Nome = "Fonema A", AtividadeId = atividade.IdAtividade };
                 db.Unidades.Add(u3);
+                await db.SaveChangesAsync();
+            }
+            else if (u3.Nome != "Fonema A")
+            {
+                u3.Nome = "Fonema A";
                 await db.SaveChangesAsync();
             }
 
