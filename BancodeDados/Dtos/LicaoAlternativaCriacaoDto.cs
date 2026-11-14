@@ -14,5 +14,6 @@ namespace Backend.Dtos
         public string RespostaCerta { get; set; } = string.Empty;
         public decimal ValorGanho { get; set; }
         public NivelDificuldade NivelDificuldade { get; set; }
+        public int? AtividadeAlternativaId { get; set; }
     }
 }

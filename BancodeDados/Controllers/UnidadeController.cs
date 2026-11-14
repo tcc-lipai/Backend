@@ -29,6 +29,7 @@ namespace Backend.Controllers
                 .Include(u => u.LicoesAlternativa)
                 .Include(u => u.LicoesVibracao)
                 .Include(u => u.AtividadesFala).ThenInclude(af => af.Exercicios.OrderBy(e => e.Ordem))
+                .Include(u => u.AtividadesAlternativa).ThenInclude(aa => aa.Exercicios.OrderBy(e => e.IdLicaoAlternativa))
                 .AsSplitQuery().ToListAsync();
         }
 
@@ -65,7 +66,8 @@ namespace Backend.Controllers
                         u.LicoesFala.Count(l => l.AtividadeFalaId == null && (int)l.NivelDificuldade <= nivelMaximo)
                         + u.AtividadesFala.Count(a => (int)a.NivelDificuldade <= nivelMaximo)
                         + u.LicoesVideo.Count(l => (int)l.NivelDificuldade <= nivelMaximo)
-                        + u.LicoesAlternativa.Count(l => (int)l.NivelDificuldade <= nivelMaximo)
+                        + u.LicoesAlternativa.Count(l => l.AtividadeAlternativaId == null && (int)l.NivelDificuldade <= nivelMaximo)
+                        + u.AtividadesAlternativa.Count(a => (int)a.NivelDificuldade <= nivelMaximo)
                         + u.LicoesVibracao.Count,
                     TotalLicoes =
                         u.LicoesFala.Count(l => (int)l.NivelDificuldade <= nivelMaximo)
@@ -86,6 +88,7 @@ namespace Backend.Controllers
                 .Include(u => u.LicoesAlternativa)
                 .Include(u => u.LicoesVibracao)
                 .Include(u => u.AtividadesFala).ThenInclude(af => af.Exercicios.OrderBy(e => e.Ordem))
+                .Include(u => u.AtividadesAlternativa).ThenInclude(aa => aa.Exercicios.OrderBy(e => e.IdLicaoAlternativa))
                 .AsSplitQuery().FirstOrDefaultAsync(u => u.IdUnidade == id);
 
             if (unidade == null)

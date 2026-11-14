@@ -57,7 +57,8 @@ namespace Backend.Controllers
                 D = dto.D,
                 RespostaCerta = dto.RespostaCerta,
                 ValorGanho = dto.ValorGanho,
-                NivelDificuldade = dto.NivelDificuldade
+                NivelDificuldade = dto.NivelDificuldade,
+                AtividadeAlternativaId = dto.AtividadeAlternativaId
             };
 
             _context.LicoesAlternativa.Add(licao);
@@ -96,6 +97,7 @@ namespace Backend.Controllers
             licao.RespostaCerta = dto.RespostaCerta;
             licao.ValorGanho = dto.ValorGanho;
             licao.NivelDificuldade = dto.NivelDificuldade;
+            licao.AtividadeAlternativaId = dto.AtividadeAlternativaId;
 
             await _context.SaveChangesAsync();
             return NoContent();

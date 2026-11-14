@@ -27,6 +27,7 @@ namespace Backend.Data
         public DbSet<ProgressoVideo> ProgressosVideo { get; set; }
         public DbSet<ProgressoVibracao> ProgressosVibracao { get; set; }
         public DbSet<AtividadeFala> AtividadesFala { get; set; }
+        public DbSet<AtividadeAlternativa> AtividadesAlternativa { get; set; }
         public DbSet<ConquistaUsuario> ConquistasUsuario { get; set; }
         public DbSet<MensagemContato> MensagensContato { get; set; }
         public DbSet<ItemSalvo> ItensSalvos { get; set; }

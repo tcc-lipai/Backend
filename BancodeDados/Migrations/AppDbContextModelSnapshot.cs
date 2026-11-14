@@ -42,6 +42,31 @@ namespace Backend.Migrations
                     b.ToTable("Atividades");
                 });
 
+            modelBuilder.Entity("Backend.Models.AtividadeAlternativa", b =>
+                {
+                    b.Property<int>("IdAtividadeAlternativa")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("IdAtividadeAlternativa"));
+
+                    b.Property<int>("NivelDificuldade")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Nome")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("UnidadeId")
+                        .HasColumnType("int");
+
+                    b.HasKey("IdAtividadeAlternativa");
+
+                    b.HasIndex("UnidadeId");
+
+                    b.ToTable("AtividadesAlternativa");
+                });
+
             modelBuilder.Entity("Backend.Models.AtividadeFala", b =>
                 {
                     b.Property<int>("IdAtividadeFala")
@@ -201,6 +226,9 @@ namespace Backend.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<int?>("AtividadeAlternativaId")
+                        .HasColumnType("int");
+
                     b.Property<string>("B")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -236,6 +264,8 @@ namespace Backend.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.HasKey("IdLicaoAlternativa");
+
+                    b.HasIndex("AtividadeAlternativaId");
 
                     b.HasIndex("UnidadeId");
 
@@ -781,6 +811,17 @@ namespace Backend.Migrations
                     b.ToTable("VinculosProfissional");
                 });
 
+            modelBuilder.Entity("Backend.Models.AtividadeAlternativa", b =>
+                {
+                    b.HasOne("Backend.Models.Unidade", "Unidade")
+                        .WithMany("AtividadesAlternativa")
+                        .HasForeignKey("UnidadeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Unidade");
+                });
+
             modelBuilder.Entity("Backend.Models.AtividadeFala", b =>
                 {
                     b.HasOne("Backend.Models.Unidade", "Unidade")
@@ -835,11 +876,17 @@ namespace Backend.Migrations
 
             modelBuilder.Entity("Backend.Models.LicaoAlternativa", b =>
                 {
+                    b.HasOne("Backend.Models.AtividadeAlternativa", "AtividadeAlternativa")
+                        .WithMany("Exercicios")
+                        .HasForeignKey("AtividadeAlternativaId");
+
                     b.HasOne("Backend.Models.Unidade", "Unidade")
                         .WithMany("LicoesAlternativa")
                         .HasForeignKey("UnidadeId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("AtividadeAlternativa");
 
                     b.Navigation("Unidade");
                 });
@@ -1051,6 +1098,11 @@ namespace Backend.Migrations
                     b.Navigation("Unidades");
                 });
 
+            modelBuilder.Entity("Backend.Models.AtividadeAlternativa", b =>
+                {
+                    b.Navigation("Exercicios");
+                });
+
             modelBuilder.Entity("Backend.Models.AtividadeFala", b =>
                 {
                     b.Navigation("Exercicios");
@@ -1073,6 +1125,8 @@ namespace Backend.Migrations
 
             modelBuilder.Entity("Backend.Models.Unidade", b =>
                 {
+                    b.Navigation("AtividadesAlternativa");
+
                     b.Navigation("AtividadesFala");
 
                     b.Navigation("LicoesAlternativa");

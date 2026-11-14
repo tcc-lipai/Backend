@@ -15,6 +15,7 @@ namespace Backend.Models
         public List<AtividadeFala> AtividadesFala { get; set; } = new();
         public List<LicaoVideo> LicoesVideo { get; set; } = new();
         public List<LicaoAlternativa> LicoesAlternativa { get; set; } = new();
+        public List<AtividadeAlternativa> AtividadesAlternativa { get; set; } = new();
         public List<LicaoVibracao> LicoesVibracao { get; set; } = new();
     }
 }
