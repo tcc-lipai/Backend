@@ -7,5 +7,8 @@ namespace Backend.Dtos
         public int AtividadeId { get; set; }
         public int TotalAtividades { get; set; }
         public int TotalLicoes { get; set; }
+        public int QtdAtividadesFala { get; set; }
+        public int QtdVideos { get; set; }
+        public int QtdAlternativas { get; set; }
     }
 }

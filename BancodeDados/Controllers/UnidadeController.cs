@@ -69,6 +69,9 @@ namespace Backend.Controllers
                         + u.LicoesAlternativa.Count(l => l.AtividadeAlternativaId == null && (int)l.NivelDificuldade <= nivelMaximo)
                         + u.AtividadesAlternativa.Count(a => (int)a.NivelDificuldade <= nivelMaximo)
                         + u.LicoesVibracao.Count,
+                    QtdAtividadesFala = u.AtividadesFala.Count,
+                    QtdVideos = u.LicoesVideo.Count,
+                    QtdAlternativas = u.LicoesAlternativa.Count,
                     TotalLicoes =
                         u.LicoesFala.Count(l => (int)l.NivelDificuldade <= nivelMaximo)
                         + u.LicoesVideo.Count(l => (int)l.NivelDificuldade <= nivelMaximo)
@@ -76,6 +79,47 @@ namespace Backend.Controllers
                         + u.LicoesVibracao.Count
                 })
                 .ToListAsync();
+        }
+
+        /// <summary>
+        /// Só os ids e níveis de tudo que existe em cada unidade, no mesmo formato de
+        /// GET /api/Unidades mas sem frases, perguntas e vídeos. É o suficiente pra calcular
+        /// o progresso (tela "Seu progresso") sem baixar megabytes de conteúdo.
+        /// </summary>
+        [HttpGet("itens")]
+        [Authorize]
+        public async Task<IActionResult> GetItensDasUnidades()
+        {
+            var itens = await _context.Unidades
+                .AsNoTracking()
+                .OrderBy(u => u.IdUnidade)
+                .Select(u => new
+                {
+                    u.IdUnidade,
+                    u.Nome,
+                    // exercícios de grupo já vêm dentro do grupo; aqui só os avulsos
+                    LicoesFala = u.LicoesFala.Where(l => l.AtividadeFalaId == null)
+                        .Select(l => new { l.IdLicaoFala, l.NivelDificuldade }).ToList(),
+                    AtividadesFala = u.AtividadesFala.Select(a => new
+                    {
+                        a.IdAtividadeFala,
+                        a.NivelDificuldade,
+                        Exercicios = a.Exercicios.Select(e => new { e.IdLicaoFala }).ToList()
+                    }).ToList(),
+                    LicoesAlternativa = u.LicoesAlternativa.Where(l => l.AtividadeAlternativaId == null)
+                        .Select(l => new { l.IdLicaoAlternativa, l.NivelDificuldade }).ToList(),
+                    AtividadesAlternativa = u.AtividadesAlternativa.Select(a => new
+                    {
+                        a.IdAtividadeAlternativa,
+                        a.NivelDificuldade,
+                        Exercicios = a.Exercicios.Select(e => new { e.IdLicaoAlternativa }).ToList()
+                    }).ToList(),
+                    LicoesVideo = u.LicoesVideo.Select(l => new { l.IdLicaoVideo, l.NivelDificuldade }).ToList()
+                })
+                .AsSplitQuery()
+                .ToListAsync();
+
+            return Ok(itens);
         }
 
         [HttpGet("{id}")]
