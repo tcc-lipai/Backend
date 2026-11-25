@@ -147,6 +147,57 @@ namespace Backend.Controllers
             return NoContent();
         }
 
+        /// <summary>Perfil do profissional logado (inclui o código que os pacientes usam pra vincular).</summary>
+        [HttpGet("meu-perfil")]
+        [Authorize(Roles = "Profissional")]
+        public async Task<IActionResult> GetMeuPerfil()
+        {
+            var id = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+
+            var perfil = await _context.Profissionais
+                .Where(p => p.IdProfissional == id)
+                .Select(p => new
+                {
+                    p.IdProfissional,
+                    p.Nome,
+                    p.Email,
+                    p.Registro,
+                    p.CodigoAcesso,
+                    QtdePacientes = p.Vinculos.Count
+                })
+                .FirstOrDefaultAsync();
+
+            return perfil == null ? NotFound(new { message = "Profissional não encontrado." }) : Ok(perfil);
+        }
+
+        [HttpPut("meu-perfil")]
+        [Authorize(Roles = "Profissional")]
+        public async Task<IActionResult> EditarMeuPerfil(ProfissionalPerfilDto dto)
+        {
+            var id = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+            var profissional = await _context.Profissionais.FindAsync(id);
+            if (profissional == null)
+                return NotFound(new { message = "Profissional não encontrado." });
+
+            if (profissional.Email.ToLower() != dto.Email.ToLower())
+            {
+                var emailExiste = await _context.Profissionais.AnyAsync(p => p.Email.ToLower() == dto.Email.ToLower() && p.IdProfissional != id)
+                    || await _context.Usuarios.AnyAsync(u => u.Email.ToLower() == dto.Email.ToLower());
+
+                if (emailExiste)
+                    return BadRequest(new { message = "Este e-mail já está em uso." });
+            }
+
+            profissional.Nome = dto.Nome;
+            profissional.Email = dto.Email;
+            profissional.Registro = dto.Registro;
+            if (!string.IsNullOrWhiteSpace(dto.Senha))
+                profissional.SenhaHash = PasswordHasher.Hash(dto.Senha);
+
+            await _context.SaveChangesAsync();
+            return NoContent();
+        }
+
         [HttpGet("pacientes")]
         [Authorize(Roles = "Profissional")]
         public async Task<IActionResult> GetPacientes()

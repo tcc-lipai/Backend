@@ -54,8 +54,8 @@ builder.Services.AddSingleton<JwtService>();
 builder.Services.AddHttpClient();
 builder.Services.AddScoped<Backend.Services.ConquistaService>();
 
-// Cliente para o serviÃ§o de IA (app_llm, porta 8001). Timeout maior porque a
-// anÃ¡lise acÃºstica do MMS roda em CPU e pode levar alguns segundos.
+// Cliente para o serviço de IA (app_llm, porta 8001). Timeout maior porque a
+// análise acústica do MMS roda em CPU e pode levar alguns segundos.
 builder.Services.AddHttpClient("IA", (sp, client) =>
 {
     var config = sp.GetRequiredService<IConfiguration>();
@@ -162,6 +162,22 @@ if (app.Environment.IsDevelopment() || builder.Configuration.GetValue<bool>("Dat
     var db = scope.ServiceProvider.GetRequiredService<Backend.Data.AppDbContext>();
     await Backend.Data.SeedData.PopularAsync(db);
 }
+
+// Aquece o EF (montagem do modelo + 1ª conexão) em segundo plano, pra o primeiro login
+// depois de subir a API não pagar esse custo.
+_ = Task.Run(async () =>
+{
+    try
+    {
+        using var scopeAquecimento = app.Services.CreateScope();
+        var dbAquecimento = scopeAquecimento.ServiceProvider.GetRequiredService<Backend.Data.AppDbContext>();
+        await dbAquecimento.Usuarios.AsNoTracking().Select(u => u.IdUsuario).FirstOrDefaultAsync();
+    }
+    catch (Exception ex)
+    {
+        app.Logger.LogWarning("Aquecimento do banco ignorado: {Mensagem}", ex.Message);
+    }
+});
 
 // Atrás de um proxy/Docker só em HTTP não há porta HTTPS pra redirecionar: desligue com UseHttpsRedirection=false.
 if (builder.Configuration.GetValue("UseHttpsRedirection", true))

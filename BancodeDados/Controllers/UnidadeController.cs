@@ -93,7 +93,7 @@ namespace Backend.Controllers
 
             if (unidade == null)
             {
-                return NotFound(new { message = "Unidade nÃ£o encontrada." });
+                return NotFound(new { message = "Unidade não encontrada." });
             }
 
             return unidade;
@@ -106,7 +106,7 @@ namespace Backend.Controllers
             var atividadeExiste = await _context.Atividades.AnyAsync(a => a.IdAtividade == dto.AtividadeId);
             if (!atividadeExiste)
             {
-                return BadRequest(new { message = "A Atividade informada nÃ£o existe." });
+                return BadRequest(new { message = "A Atividade informada não existe." });
             }
 
             var novaUnidade = new Unidade
@@ -129,13 +129,13 @@ namespace Backend.Controllers
 
             if (unidadeBanco == null)
             {
-                return NotFound(new { message = "Unidade nÃ£o encontrada." });
+                return NotFound(new { message = "Unidade não encontrada." });
             }
 
             var atividadeExiste = await _context.Atividades.AnyAsync(a => a.IdAtividade == dto.AtividadeId);
             if (!atividadeExiste)
             {
-                return BadRequest(new { message = "A Atividade informada nÃ£o existe." });
+                return BadRequest(new { message = "A Atividade informada não existe." });
             }
 
             unidadeBanco.Nome = dto.Nome;

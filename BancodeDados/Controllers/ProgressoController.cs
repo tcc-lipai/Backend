@@ -40,7 +40,7 @@ namespace Backend.Controllers
             if (usuario == null) return NotFound();
 
             var licao = await _context.LicoesAlternativa.FindAsync(licaoId);
-            if (licao == null) return NotFound(new { message = "LiÃ§Ã£o nÃ£o encontrada." });
+            if (licao == null) return NotFound(new { message = "Lição não encontrada." });
 
             if (!RegraNivelService.PodeAcessarConteudo(usuario.NivelDificuldade, licao.NivelDificuldade))
                 return Forbid();
@@ -75,10 +75,10 @@ namespace Backend.Controllers
                 .Include(p => p.LicaoAlternativa)
                 .FirstOrDefaultAsync(p => p.IdProgresso == idProgresso);
 
-            if (progresso == null) return NotFound(new { message = "Progresso nÃ£o encontrado." });
+            if (progresso == null) return NotFound(new { message = "Progresso não encontrado." });
             if (progresso.UsuarioId != UsuarioLogadoId) return Forbid();
             if (progresso.Status == StatusProgresso.Concluido)
-                return BadRequest(new { message = "Essa tentativa jÃ¡ foi concluÃ­da." });
+                return BadRequest(new { message = "Essa tentativa já foi concluída." });
 
             var usuario = await _context.Usuarios.FindAsync(UsuarioLogadoId);
 
@@ -116,7 +116,7 @@ namespace Backend.Controllers
                     _context.Notificacoes.Add(new Notificacao
                     {
                         UsuarioId = UsuarioLogadoId,
-                        Descricao = $"LiÃ§Ã£o concluÃ­da! ðŸŽ‰ VocÃª acertou e ganhou {valorFinal} moedas."
+                        Descricao = $"Lição concluída! 🎉 Você acertou e ganhou {valorFinal} moedas."
                     });
                 }
             }
@@ -150,7 +150,7 @@ namespace Backend.Controllers
             if (usuario == null) return NotFound();
 
             var licao = await _context.LicoesFala.FindAsync(licaoId);
-            if (licao == null) return NotFound(new { message = "LiÃ§Ã£o nÃ£o encontrada." });
+            if (licao == null) return NotFound(new { message = "Lição não encontrada." });
 
             if (!RegraNivelService.PodeAcessarConteudo(usuario.NivelDificuldade, licao.NivelDificuldade))
                 return Forbid();
@@ -186,13 +186,13 @@ namespace Backend.Controllers
                 .Include(p => p.LicaoFala)
                 .FirstOrDefaultAsync(p => p.IdProgresso == idProgresso);
 
-            if (progresso == null) return NotFound(new { message = "Progresso nÃ£o encontrado." });
+            if (progresso == null) return NotFound(new { message = "Progresso não encontrado." });
             if (progresso.UsuarioId != UsuarioLogadoId) return Forbid();
             if (progresso.Status == StatusProgresso.Concluido)
-                return BadRequest(new { message = "Essa tentativa jÃ¡ foi concluÃ­da." });
+                return BadRequest(new { message = "Essa tentativa já foi concluída." });
 
             if (arquivo == null || arquivo.Length == 0)
-                return BadRequest(new { message = "Nenhum arquivo de Ã¡udio enviado." });
+                return BadRequest(new { message = "Nenhum arquivo de áudio enviado." });
 
             var usuario = await _context.Usuarios.FindAsync(UsuarioLogadoId);
 
@@ -214,7 +214,7 @@ namespace Backend.Controllers
             }
             catch (HttpRequestException)
             {
-                return StatusCode(502, new { message = "NÃ£o foi possÃ­vel avaliar o Ã¡udio â€” o serviÃ§o de IA estÃ¡ indisponÃ­vel." });
+                return StatusCode(502, new { message = "Não foi possível avaliar o áudio — o serviço de IA está indisponível." });
             }
 
             bool correta = avaliacao.ScoreGeral >= LimiarAcertoFala;
@@ -256,7 +256,7 @@ namespace Backend.Controllers
                     _context.Notificacoes.Add(new Notificacao
                     {
                         UsuarioId = UsuarioLogadoId,
-                        Descricao = $"LiÃ§Ã£o concluÃ­da! ðŸ—£ï¸ VocÃª acertou a fala e ganhou {valorFinal} moedas."
+                        Descricao = $"Lição concluída! 🗣️ Você acertou a fala e ganhou {valorFinal} moedas."
                     });
                 }
             }
@@ -294,7 +294,7 @@ namespace Backend.Controllers
             if (usuario == null) return NotFound();
 
             var licao = await _context.LicoesVideo.FindAsync(licaoId);
-            if (licao == null) return NotFound(new { message = "LiÃ§Ã£o nÃ£o encontrada." });
+            if (licao == null) return NotFound(new { message = "Lição não encontrada." });
 
             if (!RegraNivelService.PodeAcessarConteudo(usuario.NivelDificuldade, licao.NivelDificuldade))
                 return Forbid();
@@ -361,9 +361,9 @@ namespace Backend.Controllers
         }
 
         /// <summary>
-        /// PrÃ³ximo exercÃ­cio de fala do aluno, gerado pelo motor adaptativo da IA
-        /// (fonema/nÃ­vel/repetiÃ§Ã£o espaÃ§ada). O estado adaptativo devolvido Ã©
-        /// persistido no usuÃ¡rio.
+        /// Próximo exercício de fala do aluno, gerado pelo motor adaptativo da IA
+        /// (fonema/nível/repetição espaçada). O estado adaptativo devolvido é
+        /// persistido no usuário.
         /// </summary>
         [HttpGet("fala/proximo-exercicio")]
         [Authorize(Roles = "Usuario")]
@@ -394,17 +394,17 @@ namespace Backend.Controllers
             }
             catch (HttpRequestException)
             {
-                return StatusCode(502, new { message = "O serviÃ§o de IA estÃ¡ indisponÃ­vel." });
+                return StatusCode(502, new { message = "O serviço de IA está indisponível." });
             }
 
             if (resposta.StatusCode == System.Net.HttpStatusCode.NotFound)
-                return NotFound(new { message = "Ainda nÃ£o hÃ¡ conteÃºdo de fala para o seu nÃ­vel/fonema atual." });
+                return NotFound(new { message = "Ainda não há conteúdo de fala para o seu nível/fonema atual." });
             if (!resposta.IsSuccessStatusCode)
-                return StatusCode(502, new { message = "O serviÃ§o de IA retornou um erro." });
+                return StatusCode(502, new { message = "O serviço de IA retornou um erro." });
 
             var exercicio = await resposta.Content.ReadFromJsonAsync<ProximoExercicioIaDto>(cancellationToken: ct);
             if (exercicio is null)
-                return StatusCode(502, new { message = "Resposta vazia do serviÃ§o de IA." });
+                return StatusCode(502, new { message = "Resposta vazia do serviço de IA." });
 
             if (exercicio.EstadoAdaptativo.ValueKind == JsonValueKind.Object)
             {
@@ -435,7 +435,7 @@ namespace Backend.Controllers
         {
             using var conteudoAudio = new StreamContent(arquivo.OpenReadStream());
             // O navegador manda algo como "audio/webm;codecs=opus" â€” Parse aceita os
-            // parÃ¢metros; o construtor de MediaTypeHeaderValue nÃ£o.
+            // parâmetros; o construtor de MediaTypeHeaderValue não.
             conteudoAudio.Headers.ContentType =
                 MediaTypeHeaderValue.TryParse(arquivo.ContentType, out var tipoConteudo)
                     ? tipoConteudo
@@ -462,11 +462,11 @@ namespace Backend.Controllers
             }
 
             if (!resposta.IsSuccessStatusCode)
-                throw new HttpRequestException($"ServiÃ§o de IA retornou {(int)resposta.StatusCode}.");
+                throw new HttpRequestException($"Serviço de IA retornou {(int)resposta.StatusCode}.");
 
             var resultado = await resposta.Content.ReadFromJsonAsync<AvaliacaoFalaIaDto>(cancellationToken: ct);
             if (resultado is null || !resultado.Sucesso)
-                throw new HttpRequestException("Resposta invÃ¡lida do serviÃ§o de IA.");
+                throw new HttpRequestException("Resposta inválida do serviço de IA.");
             return resultado;
         }
 
