@@ -7,8 +7,9 @@ namespace Backend.Models
         [Key]
         public int IdPalavra { get; set; }
 
-        public string Nome { get; set; } = string.Empty; 
-        public string VideoUrl { get; set; } = string.Empty; 
+        public string Nome { get; set; } = string.Empty;
+        public string VideoUrl { get; set; } = string.Empty;
+        public string ImagemUrl { get; set; } = string.Empty;
 
         public int CategoriaId { get; set; }
         public Categoria? Categoria { get; set; }

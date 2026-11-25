@@ -33,6 +33,7 @@ namespace Backend.Controllers
                     p.IdPalavra,
                     p.Nome,
                     p.VideoUrl,
+                    p.ImagemUrl,
                     p.CategoriaId,
                     NomeCategoria = p.Categoria!.Nome
                 })
@@ -57,6 +58,7 @@ namespace Backend.Controllers
                 palavra.IdPalavra,
                 palavra.Nome,
                 palavra.VideoUrl,
+                palavra.ImagemUrl,
                 palavra.CategoriaId,
                 NomeCategoria = palavra.Categoria?.Nome
             });
@@ -74,6 +76,7 @@ namespace Backend.Controllers
             {
                 Nome = dto.Nome,
                 VideoUrl = dto.VideoUrl,
+                ImagemUrl = dto.ImagemUrl,
                 CategoriaId = dto.CategoriaId
             };
 
@@ -97,6 +100,7 @@ namespace Backend.Controllers
 
             palavra.Nome = dto.Nome;
             palavra.VideoUrl = dto.VideoUrl;
+            palavra.ImagemUrl = dto.ImagemUrl;
             palavra.CategoriaId = dto.CategoriaId;
 
             await _context.SaveChangesAsync();
