@@ -38,6 +38,11 @@ namespace Backend.Controllers
             return pode ? null : Forbid();
         }
 
+        /// <summary>O grupo informado precisa existir e ser da mesma unidade da pergunta.</summary>
+        private async Task<bool> GrupoAlternativaValido(int? grupoId, int unidadeId) =>
+            grupoId == null || await _context.AtividadesAlternativa
+                .AnyAsync(g => g.IdAtividadeAlternativa == grupoId && g.UnidadeId == unidadeId);
+
         [HttpPost("alternativa")]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> PostAlternativa(LicaoAlternativaCriacaoDto dto)
@@ -45,6 +50,9 @@ namespace Backend.Controllers
             var unidadeExiste = await _context.Unidades.AnyAsync(u => u.IdUnidade == dto.UnidadeId);
             if (!unidadeExiste)
                 return BadRequest(new { message = "A Unidade informada não existe." });
+
+            if (!await GrupoAlternativaValido(dto.AtividadeAlternativaId, dto.UnidadeId))
+                return BadRequest(new { message = "A atividade de interpretação informada não pertence a esta unidade." });
 
             var licao = new LicaoAlternativa
             {
@@ -86,6 +94,9 @@ namespace Backend.Controllers
         {
             var licao = await _context.LicoesAlternativa.FindAsync(id);
             if (licao == null) return NotFound();
+
+            if (!await GrupoAlternativaValido(dto.AtividadeAlternativaId, dto.UnidadeId))
+                return BadRequest(new { message = "A atividade de interpretação informada não pertence a esta unidade." });
 
             licao.UnidadeId = dto.UnidadeId;
             licao.VideoUrl = dto.VideoUrl;

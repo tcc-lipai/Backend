@@ -45,10 +45,11 @@ namespace Backend.Controllers
 
         private record Conteudo(
             List<(int Id, int UnidadeId, int? GrupoId)> Fala,
-            List<(int Id, int UnidadeId)> Alternativa,
+            List<(int Id, int UnidadeId, int? GrupoId)> Alternativa,
             List<(int Id, int UnidadeId)> Video,
             List<(int Id, int UnidadeId)> Vibracao,
             List<(int Id, string Nome, NivelDificuldade Nivel, int UnidadeId)> Grupos,
+            List<(int Id, int UnidadeId)> GruposAlternativa,
             HashSet<int> FalaFeita,
             HashSet<int> AlternativaFeita,
             HashSet<int> VideoFeito,
@@ -64,7 +65,10 @@ namespace Backend.Controllers
                 .Select(l => new { l.IdLicaoFala, l.UnidadeId, l.AtividadeFalaId }).ToListAsync();
             var alternativa = await _context.LicoesAlternativa
                 .Where(l => l.NivelDificuldade <= nivel && (unidadeId == null || l.UnidadeId == unidadeId))
-                .Select(l => new { l.IdLicaoAlternativa, l.UnidadeId }).ToListAsync();
+                .Select(l => new { l.IdLicaoAlternativa, l.UnidadeId, l.AtividadeAlternativaId }).ToListAsync();
+            var gruposAlternativa = await _context.AtividadesAlternativa
+                .Where(a => a.NivelDificuldade <= nivel && (unidadeId == null || a.UnidadeId == unidadeId))
+                .Select(a => new { a.IdAtividadeAlternativa, a.UnidadeId }).ToListAsync();
             var video = await _context.LicoesVideo
                 .Where(l => l.NivelDificuldade <= nivel && (unidadeId == null || l.UnidadeId == unidadeId))
                 .Select(l => new { l.IdLicaoVideo, l.UnidadeId }).ToListAsync();
@@ -90,10 +94,11 @@ namespace Backend.Controllers
 
             return new Conteudo(
                 fala.Select(l => (l.IdLicaoFala, l.UnidadeId, l.AtividadeFalaId)).ToList(),
-                alternativa.Select(l => (l.IdLicaoAlternativa, l.UnidadeId)).ToList(),
+                alternativa.Select(l => (l.IdLicaoAlternativa, l.UnidadeId, l.AtividadeAlternativaId)).ToList(),
                 video.Select(l => (l.IdLicaoVideo, l.UnidadeId)).ToList(),
                 vibracao.Select(l => (l.IdLicaoVibracao, l.UnidadeId)).ToList(),
                 grupos.Select(g => (g.IdAtividadeFala, g.Nome, g.NivelDificuldade, g.UnidadeId)).ToList(),
+                gruposAlternativa.Select(g => (g.IdAtividadeAlternativa, g.UnidadeId)).ToList(),
                 falaFeita.ToHashSet(), altFeita.ToHashSet(), videoFeito.ToHashSet(), vibFeita.ToHashSet());
         }
 
@@ -117,10 +122,20 @@ namespace Backend.Controllers
                 if (exercicios.All(c.FalaFeita.Contains)) feitas++;
             }
 
-            foreach (var l in c.Alternativa.Where(l => l.UnidadeId == unidadeId))
+            // interpretacao avulsa
+            foreach (var l in c.Alternativa.Where(l => l.UnidadeId == unidadeId && l.GrupoId == null))
             {
                 total++;
                 if (c.AlternativaFeita.Contains(l.Id)) feitas++;
+            }
+
+            // grupos de interpretacao: mesma regra dos de fala (uma atividade so, como o aluno ve)
+            foreach (var g in c.GruposAlternativa.Where(g => g.UnidadeId == unidadeId))
+            {
+                var perguntas = c.Alternativa.Where(l => l.GrupoId == g.Id).Select(l => l.Id).ToList();
+                if (perguntas.Count == 0) continue;
+                total++;
+                if (perguntas.All(c.AlternativaFeita.Contains)) feitas++;
             }
             foreach (var l in c.Video.Where(l => l.UnidadeId == unidadeId))
             {
